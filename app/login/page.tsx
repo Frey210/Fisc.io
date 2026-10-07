@@ -13,6 +13,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
+  // Auto redirect if user already logged in or redirected with access token
+  useState(() => {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        router.push('/dashboard');
+      }
+    });
+  });
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
