@@ -1,49 +1,92 @@
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { Transaction } from '@/types/database';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { CashFlowChart } from '@/components/dashboard/cash-flow-chart';
 import { TransactionList } from '@/components/dashboard/transaction-list';
 import { TelegramLinkCard } from '@/components/dashboard/telegram-link-card';
 import { formatCurrency } from '@/lib/utils';
-import { Wallet, LogOut, Sparkles } from 'lucide-react';
+import { Wallet, LogOut, Sparkles, RefreshCw } from 'lucide-react';
 
-export const revalidate = 0;
+export default function DashboardClient() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [telegramLink, setTelegramLink] = useState<any>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
+  useEffect(() => {
+    async function loadData() {
+      // 1. Check session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-  // 1. Get authenticated user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+      if (!session) {
+        window.location.href = '/login';
+        return;
+      }
 
-  // If not logged in, redirect to login page
-  if (!user) {
-    redirect('/login');
+      const currentUser = session.user;
+      setUser(currentUser);
+
+      // 2. Fetch User's Telegram link
+      const { data: linkData } = await supabase
+        .from('telegram_links')
+        .select('telegram_chat_id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      setTelegramLink(linkData);
+
+      // 3. Fetch User's Transactions
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('date', { ascending: false })
+        .limit(50);
+
+      setTransactions((txData as Transaction[]) || []);
+      setLoading(false);
+    }
+
+    loadData();
+
+    // Subscribe to auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        window.location.href = '/login';
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw className="h-6 w-6 animate-spin text-emerald-400" />
+          <p className="text-sm">Memuat dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
-  const supabaseAdmin = createAdminClient();
-
-  // 2. Fetch User's Telegram link status
-  const { data: telegramLink } = await supabaseAdmin
-    .from('telegram_links')
-    .select('telegram_chat_id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  // 3. Fetch User's Transactions (Isolated by user_id)
-  const { data: rawTransactions } = await supabaseAdmin
-    .from('transactions')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('date', { ascending: false })
-    .limit(50);
-
-  const transactions = (rawTransactions as Transaction[]) || [];
-
-  // 4. Compute Analytics
+  // Compute Analytics
   let totalIncome = 0;
   let totalExpense = 0;
   let totalSavings = 0;
@@ -96,17 +139,15 @@ export default async function DashboardPage() {
 
           <div className="flex items-center gap-4">
             <span className="hidden text-xs text-slate-400 sm:inline-block">
-              {user.email}
+              {user?.email}
             </span>
-            <form action="/auth/signout" method="POST">
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-rose-500/10 hover:text-rose-400"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>Keluar</span>
-              </button>
-            </form>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-rose-500/10 hover:text-rose-400"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Keluar</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -115,7 +156,7 @@ export default async function DashboardPage() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
         {/* User Telegram Link Status Banner */}
         <TelegramLinkCard
-          userId={user.id}
+          userId={user?.id || ''}
           isLinked={!!telegramLink}
           telegramChatId={telegramLink?.telegram_chat_id}
         />

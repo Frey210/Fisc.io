@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Wallet, ArrowRight, Mail, Lock, Sparkles, CheckCircle2 } from 'lucide-react';
@@ -13,14 +13,27 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
-  // Auto redirect if user already logged in or redirected with access token
-  useState(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
+  useEffect(() => {
+    // 1. Check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
       }
     });
-  });
+
+    // 2. Listen for auth changes (OAuth hash token redirect)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        window.location.href = '/dashboard';
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
