@@ -1,17 +1,197 @@
 import { NextResponse } from 'next/server';
+import { parseTransactionText } from '@/lib/nlp/parser';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { sendTelegramMessage } from '@/lib/telegram/client';
+import { TelegramWebhookUpdate } from '@/types/database';
 
 export async function POST(request: Request) {
-  try {
-    const payload = await request.json();
+  // 1. Verify Telegram secret token header if configured
+  const secretHeader = request.headers.get('x-telegram-bot-api-secret-token');
+  const configuredSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
-    // Placeholder: Process Telegram Bot webhook updates (Phase 2 & Phase 3)
-    return NextResponse.json({ ok: true, received: true });
+  if (configuredSecret && secretHeader !== configuredSecret) {
+    return NextResponse.json({ error: 'Unauthorized secret token' }, { status: 401 });
+  }
+
+  let update: TelegramWebhookUpdate;
+  try {
+    update = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+  }
+
+  const message = update.message;
+  if (!message || !message.chat) {
+    // Return 200 OK so Telegram stops resending non-message updates
+    return NextResponse.json({ ok: true, ignored: true });
+  }
+
+  const chatId = message.chat.id;
+  const rawText = message.text?.trim() || message.caption?.trim() || '';
+
+  try {
+    const supabaseAdmin = createAdminClient();
+
+    // 2. Handle /start or linking command
+    // Syntax: /start or /link <user_uuid>
+    if (rawText.startsWith('/start') || rawText.startsWith('/link')) {
+      const parts = rawText.split(/\s+/);
+      const linkingCode = parts[1];
+
+      if (!linkingCode) {
+        // Check if already linked
+        const { data: existingLink } = await supabaseAdmin
+          .from('telegram_links')
+          .select('user_id')
+          .eq('telegram_chat_id', chatId)
+          .single();
+
+        if (existingLink) {
+          await sendTelegramMessage(
+            chatId,
+            `✅ Akun Fisc.io sudah terhubung!\n\nFormat input cepat:\n• <code>50000 makan</code> (Pengeluaran)\n• <code>+8000000 gaji</code> (Pemasukan)\n• <code>> 1000000 tabungan</code> (Transfer/Simpan)`
+          );
+        } else {
+          await sendTelegramMessage(
+            chatId,
+            `👋 Selamat datang di <b>Fisc.io Bot</b>!\n\nAkun Anda belum terhubung. Buka web dashboard Fisc.io Anda di bagian Settings untuk mendapatkan kode link, lalu kirim perintah:\n<code>/link [USER_ID]</code>`
+          );
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      // Link user ID with telegram chat ID
+      const { error: linkErr } = await supabaseAdmin
+        .from('telegram_links')
+        .upsert(
+          {
+            user_id: linkingCode,
+            telegram_chat_id: chatId,
+            linked_at: new Date().toISOString(),
+          },
+          { onConflict: 'telegram_chat_id' }
+        );
+
+      if (linkErr) {
+        await sendTelegramMessage(
+          chatId,
+          `❌ Gagal menghubungkan akun: pastikan User ID valid (${linkErr.message}).`
+        );
+      } else {
+        await sendTelegramMessage(
+          chatId,
+          `🎉 Berhasil terhubung dengan Fisc.io!\n\nSekarang Anda dapat mencatat pengeluaran kapan saja:\n• <code>25k es kopi susu</code>\n• <code>+5jt project fee</code>\n• <code>> 500k reksadana</code>`
+        );
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // 3. Verify user link
+    const { data: userLink, error: userLinkErr } = await supabaseAdmin
+      .from('telegram_links')
+      .select('user_id')
+      .eq('telegram_chat_id', chatId)
+      .single();
+
+    if (userLinkErr || !userLink) {
+      await sendTelegramMessage(
+        chatId,
+        `⚠️ Telegram Anda belum terhubung ke akun Fisc.io.\nKetik <code>/link [USER_ID]</code> dengan ID profil akun Anda.`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    const userId = userLink.user_id;
+
+    // 4. Handle Text Ingestion
+    if (rawText) {
+      const parsed = parseTransactionText(rawText);
+
+      if (!parsed) {
+        await sendTelegramMessage(
+          chatId,
+          `❓ Format tidak dikenali.\n\nContoh yang didukung:\n• <code>45000 nasi padang</code>\n• <code>kopi 25k</code>\n• <code>+10jt gaji</code>\n• <code>> 2jt tabungan</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // 4a. Find or create matching Category
+      let categoryId: string | null = null;
+      if (parsed.categoryHint) {
+        const { data: existingCat } = await supabaseAdmin
+          .from('categories')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('name', parsed.categoryHint)
+          .maybeSingle();
+
+        if (existingCat) {
+          categoryId = existingCat.id;
+        } else {
+          const { data: newCat } = await supabaseAdmin
+            .from('categories')
+            .insert({
+              user_id: userId,
+              name: parsed.categoryHint,
+              type: parsed.type,
+            })
+            .select('id')
+            .single();
+
+          if (newCat) categoryId = newCat.id;
+        }
+      }
+
+      // 4b. Insert Transaction
+      const { error: insertErr } = await supabaseAdmin.from('transactions').insert({
+        user_id: userId,
+        type: parsed.type,
+        amount: parsed.amount,
+        description: parsed.description,
+        category_id: categoryId,
+        source: 'telegram_text',
+        confidence_score: parsed.confidence,
+        date: new Date().toISOString(),
+      });
+
+      if (insertErr) {
+        await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi: ${insertErr.message}`);
+        return NextResponse.json({ ok: true });
+      }
+
+      const formattedAmount = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+      }).format(parsed.amount);
+
+      const typeBadge =
+        parsed.type === 'INCOME'
+          ? '🟢 <b>PEMASUKAN</b>'
+          : parsed.type === 'TRANSFER'
+          ? '🔵 <b>TRANSFER/TABUNGAN</b>'
+          : '🔴 <b>PENGELUARAN</b>';
+
+      await sendTelegramMessage(
+        chatId,
+        `✅ Transaksi Tercatat!\n\n${typeBadge}\n💰 <b>Jumlah:</b> ${formattedAmount}\n📝 <b>Keterangan:</b> ${parsed.description}\n🏷️ <b>Kategori:</b> ${parsed.categoryHint || '-'}`
+      );
+
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({ ok: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+    const msg = err instanceof Error ? err.message : 'Server error';
+    console.error('[Telegram Webhook Error]', msg);
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'active', endpoint: 'telegram_webhook' });
+  return NextResponse.json({
+    status: 'online',
+    service: 'Fisc.io Telegram Webhook Endpoint',
+    timestamp: new Date().toISOString(),
+  });
 }
