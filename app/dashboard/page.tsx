@@ -1,26 +1,49 @@
+import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { redirect } from 'next/navigation';
 import { Transaction } from '@/types/database';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { CashFlowChart } from '@/components/dashboard/cash-flow-chart';
 import { TransactionList } from '@/components/dashboard/transaction-list';
+import { TelegramLinkCard } from '@/components/dashboard/telegram-link-card';
 import { formatCurrency } from '@/lib/utils';
-import { Wallet, Bell, Link2, Sparkles, Filter } from 'lucide-react';
+import { Wallet, LogOut, Sparkles } from 'lucide-react';
 
-export const revalidate = 0; // Fresh analytics on each request
+export const revalidate = 0;
 
-async function getDashboardData() {
-  const supabase = createAdminClient();
+export default async function DashboardPage() {
+  const supabase = await createClient();
 
-  // Fetch recent transactions
-  const { data: rawTransactions } = await supabase
+  // 1. Get authenticated user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // If not logged in, redirect to login page
+  if (!user) {
+    redirect('/login');
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  // 2. Fetch User's Telegram link status
+  const { data: telegramLink } = await supabaseAdmin
+    .from('telegram_links')
+    .select('telegram_chat_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  // 3. Fetch User's Transactions (Isolated by user_id)
+  const { data: rawTransactions } = await supabaseAdmin
     .from('transactions')
     .select('*')
+    .eq('user_id', user.id)
     .order('date', { ascending: false })
     .limit(50);
 
   const transactions = (rawTransactions as Transaction[]) || [];
 
-  // Compute Analytics
+  // 4. Compute Analytics
   let totalIncome = 0;
   let totalExpense = 0;
   let totalSavings = 0;
@@ -34,8 +57,6 @@ async function getDashboardData() {
 
   const netCashFlow = totalIncome - totalExpense;
   const savingsRate = totalIncome > 0 ? ((totalSavings / totalIncome) * 100).toFixed(1) : '0';
-
-  // Financial Runway: Total Savings / Monthly Burn Rate (assumed totalExpense as burn baseline)
   const monthlyBurn = totalExpense > 0 ? totalExpense : 1;
   const runwayMonths = totalSavings > 0 ? (totalSavings / monthlyBurn).toFixed(1) : '0.0';
 
@@ -53,21 +74,6 @@ async function getDashboardData() {
     income: vals.income,
     expense: vals.expense,
   }));
-
-  return {
-    transactions,
-    totalIncome,
-    totalExpense,
-    totalSavings,
-    netCashFlow,
-    savingsRate,
-    runwayMonths,
-    chartData,
-  };
-}
-
-export default async function DashboardPage() {
-  const data = await getDashboardData();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -88,55 +94,62 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-800">
-              <Link2 className="h-3.5 w-3.5 text-sky-400" />
-              <span>Telegram Linked</span>
-            </button>
+          <div className="flex items-center gap-4">
+            <span className="hidden text-xs text-slate-400 sm:inline-block">
+              {user.email}
+            </span>
+            <form action="/auth/signout" method="POST">
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-rose-500/10 hover:text-rose-400"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Keluar</span>
+              </button>
+            </form>
           </div>
         </div>
       </nav>
 
       {/* Main Dashboard Layout */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Executive Analytics</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Real-time cash flow, runway, and omnichannel ingestion monitoring.
-          </p>
-        </div>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
+        {/* User Telegram Link Status Banner */}
+        <TelegramLinkCard
+          userId={user.id}
+          isLinked={!!telegramLink}
+          telegramChatId={telegramLink?.telegram_chat_id}
+        />
 
         {/* 4 Core KPIs */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             title="Net Cash Flow"
-            value={formatCurrency(data.netCashFlow)}
+            value={formatCurrency(netCashFlow)}
             subtext="Total Monthly Net Position"
-            type={data.netCashFlow >= 0 ? 'income' : 'expense'}
+            type={netCashFlow >= 0 ? 'income' : 'expense'}
           />
           <MetricCard
             title="Savings Rate"
-            value={`${data.savingsRate}%`}
+            value={`${savingsRate}%`}
             subtext="Income transferred to wealth"
             type="savings"
           />
           <MetricCard
             title="Financial Runway"
-            value={`${data.runwayMonths} Bln`}
+            value={`${runwayMonths} Bln`}
             subtext="Estimated survival on reserve"
             type="runway"
           />
           <MetricCard
             title="Total Inflow"
-            value={formatCurrency(data.totalIncome)}
+            value={formatCurrency(totalIncome)}
             subtext="Gross monthly captured income"
             type="income"
           />
         </div>
 
         {/* Visual Charts & Transaction Feeds */}
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Cash Flow Timeline */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 lg:col-span-2">
             <div className="mb-6 flex items-center justify-between">
@@ -153,7 +166,7 @@ export default async function DashboardPage() {
                 </span>
               </div>
             </div>
-            <CashFlowChart data={data.chartData} />
+            <CashFlowChart data={chartData} />
           </div>
 
           {/* Quick Stats / Guide */}
@@ -165,11 +178,11 @@ export default async function DashboardPage() {
 
             <div className="flex flex-col gap-3 rounded-xl border border-slate-800/80 bg-slate-950/60 p-4 text-xs text-slate-300">
               <span className="font-semibold text-emerald-400">⚡ Input Cepat Telegram:</span>
-              <div className="space-y-1.5 text-slate-400">
-                <p>• <code>45000 makan</code> (Pengeluaran)</p>
-                <p>• <code>kopi 25k</code> (Pengeluaran)</p>
-                <p>• <code>+8000000 gaji</code> (Pemasukan)</p>
-                <p>• <code>&gt; 1500000 reksadana</code> (Simpanan)</p>
+              <div className="space-y-1.5 text-slate-400 font-mono text-[11px]">
+                <p>• 45000 makan nasi</p>
+                <p>• kopi padu rasa 25k</p>
+                <p>• +8000000 gaji bulan ini</p>
+                <p>• &gt; 1500000 reksadana bibit</p>
               </div>
             </div>
 
@@ -179,21 +192,21 @@ export default async function DashboardPage() {
                 <span>Auto Classification</span>
               </div>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                AI Regex mengkategorikan otomatis transaksi Anda ke pos F&amp;B, Transport, Hosting, Utilities, dsb.
+                AI Regex otomatis mendeteksi F&amp;B, Transportasi, Server Hosting, Utilitas, dsb.
               </p>
             </div>
           </div>
         </div>
 
         {/* Live Transaction Ledger */}
-        <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-white">Transaction Ledger</h2>
-              <p className="text-xs text-slate-400">Daftar transaksi real-time dari bot &amp; web</p>
+              <p className="text-xs text-slate-400">Daftar transaksi akun Anda</p>
             </div>
           </div>
-          <TransactionList transactions={data.transactions} />
+          <TransactionList transactions={transactions} />
         </div>
       </main>
     </div>
