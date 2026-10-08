@@ -19,9 +19,11 @@ export function TelegramLinkCard({ userId, isLinked, telegramChatId }: TelegramL
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const telegramDeepLink = `https://t.me/FiscioBot?start=${encodeURIComponent(userId)}`;
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-xl">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-400">
             <Smartphone className="h-5 w-5" />
@@ -34,20 +36,28 @@ export function TelegramLinkCard({ userId, isLinked, telegramChatId }: TelegramL
           </div>
         </div>
 
-        {isLinked ? (
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400">
-            Terhubung (Chat ID: {telegramChatId})
-          </span>
-        ) : (
-          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-400">
-            Belum Terhubung
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isLinked ? (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400">
+              Terhubung (Chat ID: {telegramChatId})
+            </span>
+          ) : (
+            <a
+              href={telegramDeepLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-400 to-blue-500 px-4 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-sky-500/25 transition active:scale-95 hover:from-sky-300 hover:to-blue-400"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>Hubungkan ke Telegram</span>
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 rounded-xl border border-slate-800/80 bg-slate-950/70 p-4">
         <p className="text-xs text-slate-300">
-          Kirim perintah ini ke bot Telegram Anda untuk menghubungkan akun:
+          Atau salin perintah manual ini dan kirim ke bot <strong>@FiscioBot</strong>:
         </p>
         <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-mono text-emerald-400">
           <span className="truncate">{linkCommand}</span>
