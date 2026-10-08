@@ -9,6 +9,7 @@ import { CashFlowChart } from '@/components/dashboard/cash-flow-chart';
 import { TransactionList } from '@/components/dashboard/transaction-list';
 import { TransactionModal } from '@/components/dashboard/transaction-modal';
 import { AccountsOverview } from '@/components/dashboard/accounts-overview';
+import { SpendingHeatmap } from '@/components/dashboard/spending-heatmap';
 import { TelegramLinkCard } from '@/components/dashboard/telegram-link-card';
 import { formatCurrency } from '@/lib/utils';
 import { LogOut, Sparkles, RefreshCw, Plus, Filter } from 'lucide-react';
@@ -319,6 +320,9 @@ export default function DashboardClient() {
           userId={user?.id || ''}
           onAccountsUpdated={handleDataRefresh}
         />
+
+        {/* Spending Heatmap by Day */}
+        <SpendingHeatmap transactions={transactions} />
 
         {/* Live Transaction Ledger */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
