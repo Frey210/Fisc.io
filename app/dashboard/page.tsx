@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Transaction } from '@/types/database';
+import { Transaction, Account } from '@/types/database';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { CashFlowChart } from '@/components/dashboard/cash-flow-chart';
 import { TransactionList } from '@/components/dashboard/transaction-list';
 import { TransactionModal } from '@/components/dashboard/transaction-modal';
+import { AccountsOverview } from '@/components/dashboard/accounts-overview';
 import { TelegramLinkCard } from '@/components/dashboard/telegram-link-card';
 import { formatCurrency } from '@/lib/utils';
 import { LogOut, Sparkles, RefreshCw, Plus, Filter } from 'lucide-react';
@@ -18,6 +19,7 @@ export default function DashboardClient() {
   const [user, setUser] = useState<any>(null);
   const [telegramLink, setTelegramLink] = useState<any>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,6 +27,16 @@ export default function DashboardClient() {
 
   // Filter state
   const [filterType, setFilterType] = useState<string>('ALL');
+
+  const fetchAccounts = useCallback(async (userId: string) => {
+    const { data: accData } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    setAccounts((accData as Account[]) || []);
+  }, []);
 
   const fetchTransactions = useCallback(async (userId: string) => {
     const { data: txData } = await supabase
@@ -61,8 +73,8 @@ export default function DashboardClient() {
 
       setTelegramLink(linkData);
 
-      // 3. Fetch User's Transactions
-      await fetchTransactions(currentUser.id);
+      // 3. Fetch Accounts & Transactions
+      await Promise.all([fetchAccounts(currentUser.id), fetchTransactions(currentUser.id)]);
       setLoading(false);
     }
 
@@ -80,7 +92,7 @@ export default function DashboardClient() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchTransactions]);
+  }, [fetchAccounts, fetchTransactions]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -100,6 +112,7 @@ export default function DashboardClient() {
   const handleDataRefresh = () => {
     if (user?.id) {
       fetchTransactions(user.id);
+      fetchAccounts(user.id);
     }
   };
 
@@ -300,6 +313,13 @@ export default function DashboardClient() {
           </div>
         </div>
 
+        {/* Accounts / Wallets Overview */}
+        <AccountsOverview
+          accounts={accounts}
+          userId={user?.id || ''}
+          onAccountsUpdated={handleDataRefresh}
+        />
+
         {/* Live Transaction Ledger */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -348,6 +368,7 @@ export default function DashboardClient() {
         onClose={() => setIsModalOpen(false)}
         onSaved={handleDataRefresh}
         userId={user?.id || ''}
+        accounts={accounts}
         transactionToEdit={selectedTx}
       />
     </div>

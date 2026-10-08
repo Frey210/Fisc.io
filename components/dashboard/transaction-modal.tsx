@@ -1,8 +1,6 @@
-'use client';
-
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { Transaction, TransactionType } from '@/types/database';
+import { Transaction, TransactionType, Account } from '@/types/database';
 import { Plus, X, Loader2 } from 'lucide-react';
 
 interface TransactionModalProps {
@@ -10,6 +8,7 @@ interface TransactionModalProps {
   onClose: () => void;
   onSaved: () => void;
   userId: string;
+  accounts: Account[];
   transactionToEdit?: Transaction | null;
 }
 
@@ -18,9 +17,12 @@ export function TransactionModal({
   onClose,
   onSaved,
   userId,
+  accounts,
   transactionToEdit,
 }: TransactionModalProps) {
   const [type, setType] = useState<TransactionType>(transactionToEdit?.type || 'EXPENSE');
+  const [accountId, setAccountId] = useState<string>(transactionToEdit?.account_id || '');
+  const [toAccountId, setToAccountId] = useState<string>(transactionToEdit?.to_account_id || '');
   const [amount, setAmount] = useState<string>(
     transactionToEdit ? String(transactionToEdit.amount) : ''
   );
@@ -56,6 +58,8 @@ export function TransactionModal({
             type,
             amount: parsedAmount,
             description: description.trim() || null,
+            account_id: accountId || null,
+            to_account_id: type === 'TRANSFER' ? toAccountId || null : null,
             date: new Date(date).toISOString(),
           })
           .eq('id', transactionToEdit.id)
@@ -69,12 +73,36 @@ export function TransactionModal({
           type,
           amount: parsedAmount,
           description: description.trim() || null,
+          account_id: accountId || null,
+          to_account_id: type === 'TRANSFER' ? toAccountId || null : null,
           date: new Date(date).toISOString(),
           source: 'web_manual',
           confidence_score: 1.0,
         });
 
         if (insertError) throw insertError;
+      }
+
+      // Update account balance automatically if account specified
+      if (accountId) {
+        const selectedAcc = accounts.find((a) => a.id === accountId);
+        if (selectedAcc) {
+          const delta = type === 'INCOME' ? parsedAmount : -parsedAmount;
+          await supabase
+            .from('accounts')
+            .update({ balance: Number(selectedAcc.balance) + delta })
+            .eq('id', accountId);
+        }
+      }
+
+      if (type === 'TRANSFER' && toAccountId) {
+        const destAcc = accounts.find((a) => a.id === toAccountId);
+        if (destAcc) {
+          await supabase
+            .from('accounts')
+            .update({ balance: Number(destAcc.balance) + parsedAmount })
+            .eq('id', toAccountId);
+        }
       }
 
       onSaved();
@@ -152,6 +180,51 @@ export function TransactionModal({
               </button>
             </div>
           </div>
+
+          {/* Account Source */}
+          {accounts.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  {type === 'TRANSFER' ? 'Dari Akun' : 'Akun / Rekening'}
+                </label>
+                <select
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                >
+                  <option value="">-- Pilih Akun (Opsional) --</option>
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {type === 'TRANSFER' && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Ke Akun
+                  </label>
+                  <select
+                    value={toAccountId}
+                    onChange={(e) => setToAccountId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                  >
+                    <option value="">-- Pilih Akun Tujuan --</option>
+                    {accounts
+                      .filter((acc) => acc.id !== accountId)
+                      .map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} ({acc.type})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Amount */}
           <div>

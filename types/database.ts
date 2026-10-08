@@ -1,5 +1,15 @@
 export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 export type TransactionSource = 'telegram_ocr' | 'telegram_text' | 'web_manual';
+export type AccountType = 'BANK' | 'E_WALLET' | 'INVESTMENT' | 'CASH';
+
+export interface Account {
+  id: string;
+  user_id: string;
+  name: string;
+  type: AccountType;
+  balance: number;
+  created_at: string;
+}
 
 export interface Category {
   id: string;
@@ -17,6 +27,8 @@ export interface Transaction {
   date: string;
   description: string | null;
   category_id: string | null;
+  account_id?: string | null;
+  to_account_id?: string | null;
   source: TransactionSource;
   confidence_score: number | null;
   created_at: string;
