@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { parseTransactionText } from '@/lib/nlp/parser';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { sendTelegramMessage } from '@/lib/telegram/client';
+import { sendTelegramMessage, getTelegramFileUrl } from '@/lib/telegram/client';
 import { TelegramWebhookUpdate } from '@/types/database';
 
 export async function POST(request: Request) {
@@ -103,7 +103,64 @@ export async function POST(request: Request) {
 
     const userId = userLink.user_id;
 
-    // 4. Handle Text Ingestion
+    // 4. Handle Photo (Receipt OCR) Ingestion
+    if (message.photo && message.photo.length > 0) {
+      // Telegram sends multiple sizes, last one is the highest resolution
+      const highestResPhoto = message.photo[message.photo.length - 1];
+      
+      await sendTelegramMessage(chatId, `🔍 <i>Memproses struk belanja dengan OCR...</i>`);
+
+      try {
+        const fileUrl = await getTelegramFileUrl(highestResPhoto.file_id);
+        const { parseReceiptImage } = await import('@/lib/ocr/receipt-parser');
+        const ocrResult = await parseReceiptImage(fileUrl);
+
+        if (!ocrResult.totalAmount) {
+          await sendTelegramMessage(
+            chatId,
+            `⚠️ Tidak dapat membaca nominal total dari struk secara jelas.\nSilakan masukkan secara manual melalui teks (contoh: <code>45000 struk indomaret</code>).`
+          );
+          return NextResponse.json({ ok: true });
+        }
+
+        const merchant = ocrResult.merchantName || 'Struk Belanja';
+
+        // Insert Transaction from OCR
+        const { error: insertErr } = await supabaseAdmin.from('transactions').insert({
+          user_id: userId,
+          type: 'EXPENSE',
+          amount: ocrResult.totalAmount,
+          description: merchant,
+          source: 'telegram_ocr',
+          confidence_score: ocrResult.confidence,
+          date: new Date().toISOString(),
+        });
+
+        if (insertErr) {
+          await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi OCR: ${insertErr.message}`);
+          return NextResponse.json({ ok: true });
+        }
+
+        const formattedAmount = new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          maximumFractionDigits: 0,
+        }).format(ocrResult.totalAmount);
+
+        await sendTelegramMessage(
+          chatId,
+          `🧾 <b>Struk Berhasil Diproses!</b>\n\n🔴 <b>PENGELUARAN</b>\n💰 <b>Total:</b> ${formattedAmount}\n🏪 <b>Merchant:</b> ${merchant}\n🎯 <b>Confidence:</b> ${(ocrResult.confidence * 100).toFixed(0)}%`
+        );
+
+        return NextResponse.json({ ok: true });
+      } catch (ocrErr: unknown) {
+        const errStr = ocrErr instanceof Error ? ocrErr.message : 'Gagal memproses gambar';
+        await sendTelegramMessage(chatId, `❌ OCR Gagal: ${errStr}`);
+        return NextResponse.json({ ok: true });
+      }
+    }
+
+    // 5. Handle Text Ingestion
     if (rawText) {
       const parsed = parseTransactionText(rawText);
 

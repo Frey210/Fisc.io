@@ -27,3 +27,23 @@ export async function sendTelegramMessage(
 
   return response.json();
 }
+
+export async function getTelegramFileUrl(fileId: string): Promise<string> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) {
+    throw new Error('TELEGRAM_BOT_TOKEN is not defined in environment variables');
+  }
+
+  const response = await fetch(`${TELEGRAM_API_BASE}${token}/getFile?file_id=${fileId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to get Telegram file: ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const filePath = data.result?.file_path;
+  if (!filePath) {
+    throw new Error('No file_path returned by Telegram API');
+  }
+
+  return `https://api.telegram.org/file/bot${token}/${filePath}`;
+}
