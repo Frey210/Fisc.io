@@ -199,13 +199,27 @@ export async function POST(request: Request) {
         }
       }
 
-      // 4b. Insert Transaction
+      // 4b. Match user account if mentioned in description (e.g. 'bca', 'gopay', 'jago')
+      const { data: userAccounts } = await supabaseAdmin
+        .from('accounts')
+        .select('id, name, balance')
+        .eq('user_id', userId);
+
+      let matchedAccount: { id: string; name: string; balance: number } | null = null;
+      if (userAccounts && userAccounts.length > 0) {
+        const descLower = parsed.description.toLowerCase();
+        matchedAccount =
+          userAccounts.find((acc) => descLower.includes(acc.name.toLowerCase())) || null;
+      }
+
+      // 4c. Insert Transaction
       const { error: insertErr } = await supabaseAdmin.from('transactions').insert({
         user_id: userId,
         type: parsed.type,
         amount: parsed.amount,
         description: parsed.description,
         category_id: categoryId,
+        account_id: matchedAccount ? matchedAccount.id : null,
         source: 'telegram_text',
         confidence_score: parsed.confidence,
         date: new Date().toISOString(),
@@ -214,6 +228,15 @@ export async function POST(request: Request) {
       if (insertErr) {
         await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi: ${insertErr.message}`);
         return NextResponse.json({ ok: true });
+      }
+
+      // 4d. Update Account Balance if matched
+      if (matchedAccount) {
+        const delta = parsed.type === 'INCOME' ? parsed.amount : -parsed.amount;
+        await supabaseAdmin
+          .from('accounts')
+          .update({ balance: Number(matchedAccount.balance) + delta })
+          .eq('id', matchedAccount.id);
       }
 
       const formattedAmount = new Intl.NumberFormat('id-ID', {
@@ -229,9 +252,11 @@ export async function POST(request: Request) {
           ? '🔵 <b>TRANSFER/TABUNGAN</b>'
           : '🔴 <b>PENGELUARAN</b>';
 
+      const accountBadge = matchedAccount ? `\n💳 <b>Akun:</b> ${matchedAccount.name}` : '';
+
       await sendTelegramMessage(
         chatId,
-        `✅ Transaksi Tercatat!\n\n${typeBadge}\n💰 <b>Jumlah:</b> ${formattedAmount}\n📝 <b>Keterangan:</b> ${parsed.description}\n🏷️ <b>Kategori:</b> ${parsed.categoryHint || '-'}`
+        `✅ Transaksi Tercatat!\n\n${typeBadge}\n💰 <b>Jumlah:</b> ${formattedAmount}\n📝 <b>Keterangan:</b> ${parsed.description}\n🏷️ <b>Kategori:</b> ${parsed.categoryHint || '-'}${accountBadge}`
       );
 
       return NextResponse.json({ ok: true });

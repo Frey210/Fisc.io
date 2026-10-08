@@ -14,6 +14,7 @@ import {
   Edit2,
   Trash2,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface TransactionListProps {
@@ -101,9 +102,24 @@ export function TransactionList({ transactions, onEdit, onDeleted }: Transaction
                     )}
                   </span>
                   {tx.confidence_score !== null && tx.confidence_score !== undefined && (
-                    <span className="flex items-center gap-0.5 text-amber-400">
-                      <Sparkles className="h-3 w-3" />
-                      <span>{(tx.confidence_score * 100).toFixed(0)}%</span>
+                    <span
+                      className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                        tx.confidence_score < 0.85
+                          ? 'border border-amber-500/40 bg-amber-500/10 text-amber-300'
+                          : 'text-slate-400'
+                      }`}
+                    >
+                      {tx.confidence_score < 0.85 ? (
+                        <>
+                          <AlertTriangle className="h-3 w-3 text-amber-400" />
+                          <span>Perlu Ditinjau ({(tx.confidence_score * 100).toFixed(0)}%)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 text-emerald-400" />
+                          <span>{(tx.confidence_score * 100).toFixed(0)}%</span>
+                        </>
+                      )}
                     </span>
                   )}
                 </div>

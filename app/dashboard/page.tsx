@@ -12,7 +12,7 @@ import { AccountsOverview } from '@/components/dashboard/accounts-overview';
 import { SpendingHeatmap } from '@/components/dashboard/spending-heatmap';
 import { TelegramLinkCard } from '@/components/dashboard/telegram-link-card';
 import { formatCurrency } from '@/lib/utils';
-import { LogOut, Sparkles, RefreshCw, Plus, Filter } from 'lucide-react';
+import { LogOut, Sparkles, RefreshCw, Plus, Filter, Download } from 'lucide-react';
 
 export default function DashboardClient() {
   const router = useRouter();
@@ -115,6 +115,34 @@ export default function DashboardClient() {
       fetchTransactions(user.id);
       fetchAccounts(user.id);
     }
+  };
+
+  const exportTransactionsCSV = () => {
+    if (transactions.length === 0) {
+      alert('Tidak ada transaksi untuk diekspor.');
+      return;
+    }
+
+    const headers = ['ID', 'Date', 'Type', 'Amount', 'Description', 'Source', 'Confidence'];
+    const rows = transactions.map((t) => [
+      t.id,
+      new Date(t.date).toISOString().split('T')[0],
+      t.type,
+      t.amount,
+      `"${(t.description || '').replace(/"/g, '""')}"`,
+      t.source,
+      t.confidence_score ?? '',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `fisc_io_transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (loading) {
@@ -334,27 +362,38 @@ export default function DashboardClient() {
               </p>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 p-1">
-              {(['ALL', 'EXPENSE', 'INCOME', 'TRANSFER'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setFilterType(tab)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
-                    filterType === tab
-                      ? 'bg-slate-800 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {tab === 'ALL'
-                    ? 'Semua'
-                    : tab === 'EXPENSE'
-                    ? 'Pengeluaran'
-                    : tab === 'INCOME'
-                    ? 'Pemasukan'
-                    : 'Transfer'}
-                </button>
-              ))}
+            {/* Filter Tabs & Export */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 p-1">
+                {(['ALL', 'EXPENSE', 'INCOME', 'TRANSFER'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setFilterType(tab)}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                      filterType === tab
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {tab === 'ALL'
+                      ? 'Semua'
+                      : tab === 'EXPENSE'
+                      ? 'Pengeluaran'
+                      : tab === 'INCOME'
+                      ? 'Pemasukan'
+                      : 'Transfer'}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={exportTransactionsCSV}
+                title="Unduh Laporan CSV"
+                className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
+              >
+                <Download className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Export CSV</span>
+              </button>
             </div>
           </div>
 
