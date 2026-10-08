@@ -199,17 +199,34 @@ export async function POST(request: Request) {
         }
       }
 
-      // 4b. Match user account if mentioned in description (e.g. 'bca', 'gopay', 'jago')
+      // 4b. Match user account(s) if mentioned in description (e.g. 'bca ke gopay', 'bca', 'cash')
       const { data: userAccounts } = await supabaseAdmin
         .from('accounts')
         .select('id, name, balance')
         .eq('user_id', userId);
 
-      let matchedAccount: { id: string; name: string; balance: number } | null = null;
+      let sourceAccount: { id: string; name: string; balance: number } | null = null;
+      let targetAccount: { id: string; name: string; balance: number } | null = null;
+
       if (userAccounts && userAccounts.length > 0) {
         const descLower = parsed.description.toLowerCase();
-        matchedAccount =
-          userAccounts.find((acc) => descLower.includes(acc.name.toLowerCase())) || null;
+
+        if (parsed.type === 'TRANSFER' && (descLower.includes(' ke ') || descLower.includes(' to '))) {
+          // Syntax e.g. "bca ke gopay" or "bank ke cash"
+          const splitParts = descLower.split(/\s+(?:ke|to)\s+/i);
+          if (splitParts.length === 2) {
+            sourceAccount =
+              userAccounts.find((acc) => splitParts[0].includes(acc.name.toLowerCase())) || null;
+            targetAccount =
+              userAccounts.find((acc) => splitParts[1].includes(acc.name.toLowerCase())) || null;
+          }
+        }
+
+        // Fallback single account match
+        if (!sourceAccount) {
+          sourceAccount =
+            userAccounts.find((acc) => descLower.includes(acc.name.toLowerCase())) || null;
+        }
       }
 
       // 4c. Insert Transaction
@@ -219,7 +236,8 @@ export async function POST(request: Request) {
         amount: parsed.amount,
         description: parsed.description,
         category_id: categoryId,
-        account_id: matchedAccount ? matchedAccount.id : null,
+        account_id: sourceAccount ? sourceAccount.id : null,
+        to_account_id: targetAccount ? targetAccount.id : null,
         source: 'telegram_text',
         confidence_score: parsed.confidence,
         date: new Date().toISOString(),
@@ -230,13 +248,26 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true });
       }
 
-      // 4d. Update Account Balance if matched
-      if (matchedAccount) {
+      // 4d. Update Account Balances
+      if (parsed.type === 'TRANSFER') {
+        if (sourceAccount) {
+          await supabaseAdmin
+            .from('accounts')
+            .update({ balance: Number(sourceAccount.balance) - parsed.amount })
+            .eq('id', sourceAccount.id);
+        }
+        if (targetAccount) {
+          await supabaseAdmin
+            .from('accounts')
+            .update({ balance: Number(targetAccount.balance) + parsed.amount })
+            .eq('id', targetAccount.id);
+        }
+      } else if (sourceAccount) {
         const delta = parsed.type === 'INCOME' ? parsed.amount : -parsed.amount;
         await supabaseAdmin
           .from('accounts')
-          .update({ balance: Number(matchedAccount.balance) + delta })
-          .eq('id', matchedAccount.id);
+          .update({ balance: Number(sourceAccount.balance) + delta })
+          .eq('id', sourceAccount.id);
       }
 
       const formattedAmount = new Intl.NumberFormat('id-ID', {
@@ -252,7 +283,12 @@ export async function POST(request: Request) {
           ? '🔵 <b>TRANSFER/TABUNGAN</b>'
           : '🔴 <b>PENGELUARAN</b>';
 
-      const accountBadge = matchedAccount ? `\n💳 <b>Akun:</b> ${matchedAccount.name}` : '';
+      const accountBadge =
+        parsed.type === 'TRANSFER' && sourceAccount && targetAccount
+          ? `\n💳 <b>Rute:</b> ${sourceAccount.name} ➔ ${targetAccount.name}`
+          : sourceAccount
+          ? `\n💳 <b>Akun:</b> ${sourceAccount.name}`
+          : '';
 
       await sendTelegramMessage(
         chatId,
