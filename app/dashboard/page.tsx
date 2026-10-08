@@ -124,8 +124,8 @@ export default function DashboardClient() {
       <nav className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 shadow-lg shadow-emerald-500/20">
-              <Wallet className="h-5 w-5 text-slate-950" />
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-lg shadow-emerald-500/20">
+              <img src="/logo.png" alt="Fisc.io Logo" className="h-full w-full object-contain" />
             </div>
             <div>
               <span className="text-lg font-black tracking-tight text-white">

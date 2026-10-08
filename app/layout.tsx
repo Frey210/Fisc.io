@@ -4,6 +4,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Fisc.io | Smart Omnichannel Cash Flow & Wealth Analytics',
   description: 'Dual-interface financial operations platform',
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

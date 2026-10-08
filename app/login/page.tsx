@@ -128,8 +128,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-7 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 shadow-2xl backdrop-blur-xl">
         {/* Brand */}
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 shadow-lg shadow-emerald-500/20">
-            <Wallet className="h-6 w-6 text-slate-950" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-emerald-500/20">
+            <img src="/logo.png" alt="Fisc.io Logo" className="h-full w-full object-contain" />
           </div>
           <h2 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-3xl">
             Fisc<span className="text-emerald-400">.io</span>
