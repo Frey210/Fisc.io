@@ -21,9 +21,10 @@ interface TransactionListProps {
   transactions: Transaction[];
   onEdit: (tx: Transaction) => void;
   onDeleted: () => void;
+  onAddNew?: () => void;
 }
 
-export function TransactionList({ transactions, onEdit, onDeleted }: TransactionListProps) {
+export function TransactionList({ transactions, onEdit, onDeleted, onAddNew }: TransactionListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
@@ -43,11 +44,22 @@ export function TransactionList({ transactions, onEdit, onDeleted }: Transaction
 
   if (transactions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center text-slate-500">
-        <p className="text-base font-medium">Belum ada transaksi tercatat</p>
-        <p className="mt-1 text-xs text-slate-600">
-          Kirim pesan ke Telegram Bot atau klik tombol <strong>+ Tambah Transaksi</strong> di atas.
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-slate-800/40 shadow-inner">
+          <ArrowRightLeft className="h-8 w-8 text-slate-500" />
+        </div>
+        <h4 className="mt-4 text-sm font-bold text-white">Belum Ada Transaksi Tercatat</h4>
+        <p className="mt-1 max-w-xs text-xs text-slate-400 leading-relaxed">
+          Mulai catat pemasukan, pengeluaran, atau transfer untuk melihat pergerakan arus kas Anda.
         </p>
+        {onAddNew && (
+          <button
+            onClick={onAddNew}
+            className="mt-5 flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:from-emerald-400 hover:to-teal-400"
+          >
+            <span>+ Catat Transaksi Pertama</span>
+          </button>
+        )}
       </div>
     );
   }

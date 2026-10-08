@@ -43,14 +43,18 @@ export function MetricCard({ title, value, subtext, trend, type }: MetricCardPro
   const badge = getBadge();
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-xl transition hover:border-slate-700">
+    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-slate-900/80 p-4 sm:p-5 shadow-lg shadow-black/20 backdrop-blur-xl transition hover:border-white/10">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">{title}</span>
-        <div className={`rounded-xl border p-2 ${badge.bg}`}>{badge.icon}</div>
+        <span className="text-[11px] sm:text-xs font-semibold tracking-wider text-slate-400 uppercase">
+          {title}
+        </span>
+        <div className={`rounded-xl border p-1.5 sm:p-2 ${badge.bg}`}>{badge.icon}</div>
       </div>
-      <div className="mt-4">
-        <h3 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{value}</h3>
-        {subtext && <p className="mt-1 text-xs text-slate-400">{subtext}</p>}
+      <div className="mt-2.5 sm:mt-3">
+        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">{value}</h3>
+        {subtext && (
+          <p className="mt-1 hidden sm:block text-[11px] text-slate-400">{subtext}</p>
+        )}
       </div>
     </div>
   );

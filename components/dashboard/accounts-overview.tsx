@@ -113,8 +113,21 @@ export function AccountsOverview({ accounts, userId, onAccountsUpdated }: Accoun
 
       {/* Account Grid / Cards */}
       {accounts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-500">
-          Belum ada rekening/dompet. Klik <strong>+ Tambah Akun</strong> untuk mencatat BCA, GoPay, Cash, dll.
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 py-12 px-4 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-slate-800/40 shadow-inner">
+            <WalletCards className="h-7 w-7 text-slate-500" />
+          </div>
+          <h4 className="mt-3.5 text-sm font-bold text-white">Belum Ada Rekening / Dompet</h4>
+          <p className="mt-1 max-w-xs text-xs text-slate-400 leading-relaxed">
+            Daftarkan rekening bank, e-wallet, atau pos cash untuk melacak total net worth dan perpindahan saldo.
+          </p>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="mt-4 flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:from-emerald-400 hover:to-teal-400"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Tambah Rekening Pertama</span>
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
