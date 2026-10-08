@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Transaction } from '@/types/database';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { CashFlowChart } from '@/components/dashboard/cash-flow-chart';
 import { TransactionList } from '@/components/dashboard/transaction-list';
+import { TransactionModal } from '@/components/dashboard/transaction-modal';
 import { TelegramLinkCard } from '@/components/dashboard/telegram-link-card';
 import { formatCurrency } from '@/lib/utils';
-import { Wallet, LogOut, Sparkles, RefreshCw } from 'lucide-react';
+import { LogOut, Sparkles, RefreshCw, Plus, Filter } from 'lucide-react';
 
 export default function DashboardClient() {
   const router = useRouter();
@@ -17,6 +18,24 @@ export default function DashboardClient() {
   const [user, setUser] = useState<any>(null);
   const [telegramLink, setTelegramLink] = useState<any>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+
+  // Filter state
+  const [filterType, setFilterType] = useState<string>('ALL');
+
+  const fetchTransactions = useCallback(async (userId: string) => {
+    const { data: txData } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .limit(100);
+
+    setTransactions((txData as Transaction[]) || []);
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -43,14 +62,7 @@ export default function DashboardClient() {
       setTelegramLink(linkData);
 
       // 3. Fetch User's Transactions
-      const { data: txData } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('date', { ascending: false })
-        .limit(50);
-
-      setTransactions((txData as Transaction[]) || []);
+      await fetchTransactions(currentUser.id);
       setLoading(false);
     }
 
@@ -68,11 +80,27 @@ export default function DashboardClient() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchTransactions]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  const handleOpenAdd = () => {
+    setSelectedTx(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (tx: Transaction) => {
+    setSelectedTx(tx);
+    setIsModalOpen(true);
+  };
+
+  const handleDataRefresh = () => {
+    if (user?.id) {
+      fetchTransactions(user.id);
+    }
   };
 
   if (loading) {
@@ -86,7 +114,13 @@ export default function DashboardClient() {
     );
   }
 
-  // Compute Analytics
+  // Filtered transactions for display
+  const displayedTransactions = transactions.filter((tx) => {
+    if (filterType === 'ALL') return true;
+    return tx.type === filterType;
+  });
+
+  // Compute Analytics based on all transactions
   let totalIncome = 0;
   let totalExpense = 0;
   let totalSavings = 0;
@@ -121,11 +155,11 @@ export default function DashboardClient() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Top Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+      <nav className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-lg shadow-emerald-500/20">
-              <img src="/logo.png" alt="Fisc.io Logo" className="h-full w-full object-contain" />
+              <img src="/logo.svg" alt="Fisc.io Logo" className="h-full w-full object-contain" />
             </div>
             <div>
               <span className="text-lg font-black tracking-tight text-white">
@@ -154,7 +188,7 @@ export default function DashboardClient() {
 
       {/* Main Dashboard Layout */}
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
-        {/* Welcome Section */}
+        {/* Welcome Section with Add Button */}
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
@@ -171,6 +205,14 @@ export default function DashboardClient() {
               Pantau cash flow, savings rate, dan runway keuangan Anda secara real-time.
             </p>
           </div>
+
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/20"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Tambah Transaksi</span>
+          </button>
         </div>
 
         {/* User Telegram Link Status Banner */}
@@ -260,15 +302,54 @@ export default function DashboardClient() {
 
         {/* Live Transaction Ledger */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-base font-bold text-white">Transaction Ledger</h2>
-              <p className="text-xs text-slate-400">Daftar transaksi akun Anda</p>
+              <p className="text-xs text-slate-400">
+                Daftar transaksi akun Anda ({displayedTransactions.length} transaksi)
+              </p>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 p-1">
+              {(['ALL', 'EXPENSE', 'INCOME', 'TRANSFER'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setFilterType(tab)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                    filterType === tab
+                      ? 'bg-slate-800 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {tab === 'ALL'
+                    ? 'Semua'
+                    : tab === 'EXPENSE'
+                    ? 'Pengeluaran'
+                    : tab === 'INCOME'
+                    ? 'Pemasukan'
+                    : 'Transfer'}
+                </button>
+              ))}
             </div>
           </div>
-          <TransactionList transactions={transactions} />
+
+          <TransactionList
+            transactions={displayedTransactions}
+            onEdit={handleOpenEdit}
+            onDeleted={handleDataRefresh}
+          />
         </div>
       </main>
+
+      {/* Transaction Modal (Add / Edit) */}
+      <TransactionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSaved={handleDataRefresh}
+        userId={user?.id || ''}
+        transactionToEdit={selectedTx}
+      />
     </div>
   );
 }

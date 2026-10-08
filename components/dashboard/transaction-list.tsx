@@ -1,18 +1,51 @@
+'use client';
+
+import { useState } from 'react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Transaction } from '@/types/database';
-import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Smartphone, Globe, Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ArrowRightLeft,
+  Smartphone,
+  Globe,
+  Sparkles,
+  Edit2,
+  Trash2,
+  Loader2,
+} from 'lucide-react';
 
 interface TransactionListProps {
   transactions: Transaction[];
+  onEdit: (tx: Transaction) => void;
+  onDeleted: () => void;
 }
 
-export function TransactionList({ transactions }: TransactionListProps) {
+export function TransactionList({ transactions, onEdit, onDeleted }: TransactionListProps) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) return;
+
+    setDeletingId(id);
+    try {
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      if (error) throw error;
+      onDeleted();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Gagal menghapus transaksi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (transactions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center text-slate-500">
         <p className="text-base font-medium">Belum ada transaksi tercatat</p>
         <p className="mt-1 text-xs text-slate-600">
-          Kirim pesan ke Telegram Bot Anda (contoh: <code>50000 makan</code>) untuk mencatat.
+          Kirim pesan ke Telegram Bot atau klik tombol <strong>+ Tambah Transaksi</strong> di atas.
         </p>
       </div>
     );
@@ -23,11 +56,12 @@ export function TransactionList({ transactions }: TransactionListProps) {
       {transactions.map((tx) => {
         const isIncome = tx.type === 'INCOME';
         const isTransfer = tx.type === 'TRANSFER';
+        const isDeleting = deletingId === tx.id;
 
         return (
           <div
             key={tx.id}
-            className="flex items-center justify-between py-4 transition hover:bg-slate-900/30"
+            className="group flex items-center justify-between py-4 px-2 rounded-xl transition hover:bg-slate-900/40"
           >
             <div className="flex items-center gap-3.5">
               <div
@@ -61,7 +95,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                       </>
                     ) : (
                       <>
-                        <Globe className="h-3 w-3 text-slate-400" />
+                        <Globe className="h-3 w-3 text-emerald-400" />
                         <span>Web</span>
                       </>
                     )}
@@ -76,19 +110,44 @@ export function TransactionList({ transactions }: TransactionListProps) {
               </div>
             </div>
 
-            <div className="text-right">
-              <span
-                className={`text-sm font-bold ${
-                  isIncome
-                    ? 'text-emerald-400'
-                    : isTransfer
-                    ? 'text-cyan-400'
-                    : 'text-rose-400'
-                }`}
-              >
-                {isIncome ? '+' : isTransfer ? '⇄ ' : '-'}
-                {formatCurrency(Number(tx.amount))}
-              </span>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <span
+                  className={`text-sm font-bold ${
+                    isIncome
+                      ? 'text-emerald-400'
+                      : isTransfer
+                      ? 'text-cyan-400'
+                      : 'text-rose-400'
+                  }`}
+                >
+                  {isIncome ? '+' : isTransfer ? '⇄ ' : '-'}
+                  {formatCurrency(Number(tx.amount))}
+                </span>
+              </div>
+
+              {/* Action buttons (Edit & Delete) */}
+              <div className="flex items-center gap-1 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => onEdit(tx)}
+                  title="Edit Transaksi"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(tx.id)}
+                  disabled={isDeleting}
+                  title="Hapus Transaksi"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         );
