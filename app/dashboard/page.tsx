@@ -248,10 +248,10 @@ export default function DashboardClient() {
           {/* Prominent Full-Width "+ Add Transaction" Button */}
           <button
             onClick={handleOpenAdd}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:from-emerald-400 hover:to-teal-400"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-3 text-sm font-black tracking-wide text-slate-950 shadow-lg shadow-emerald-500/25 transition active:scale-[0.98] hover:from-emerald-300 hover:to-teal-300"
           >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>+ Tambah Transaksi</span>
+            <Plus className="h-4 w-4 stroke-[3]" />
+            <span>Tambah Transaksi</span>
           </button>
 
           {/* Navigation Links */}
