@@ -9,11 +9,7 @@ import { AsymmetricBentoGrid } from '@/components/asymmetric-bento-grid';
 import { StaggeredSteps } from '@/components/staggered-steps';
 import { TechnicalTrustSection } from '@/components/technical-trust';
 import { FloatingBackgroundAssets } from '@/components/floating-background-assets';
-import {
-  ArrowRight,
-  Send,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, Send } from 'lucide-react';
 
 export default function LandingPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
@@ -59,12 +55,8 @@ export default function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Parallax Floating 3D Background Assets */}
+      {/* Floating 3D Background Assets with Parallax */}
       <FloatingBackgroundAssets />
-
-      {/* Spatial Radial Background Blurs */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[650px] w-[1100px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-emerald-500/20 via-teal-500/10 to-transparent blur-[140px]" />
-      <div className="pointer-events-none absolute top-[700px] -left-40 -z-10 h-[500px] w-[600px] rounded-full bg-gradient-to-tr from-cyan-500/10 to-indigo-500/5 blur-[120px]" />
 
       {/* Top Header Navigation */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl">
@@ -106,79 +98,82 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* INTERACTIVE HERO SECTION */}
-      <section className="mx-auto max-w-5xl px-4 pt-16 pb-20 text-center sm:px-6 lg:px-8 sm:pt-24 sm:pb-28">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400 mb-6 backdrop-blur-md">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Fisc.io 1.0 — Omnichannel Wealth Operations</span>
+      {/* 1. HERO SECTION (Split Layout: Left Text, Right Floating Devices) */}
+      <section className="mx-auto max-w-7xl px-4 pt-12 pb-20 sm:px-6 lg:px-8 sm:pt-20 sm:pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          {/* Left Column: Copy & Actions */}
+          <div className="lg:col-span-6 text-left">
+            {/* Copy - Badge */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400 mb-6 backdrop-blur-md">
+              <span>✨ Fisc.io 1.0 — Smart Wealth Tracker</span>
+            </div>
+
+            {/* Copy - Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.12]">
+              Catat Pengeluaran Semudah Chatting.
+            </h1>
+
+            {/* Copy - Subhead */}
+            <p className="mt-5 text-base sm:text-lg text-slate-300 leading-relaxed font-normal max-w-xl">
+              Tinggalkan form manual yang membosankan. Cukup kirim pesan atau foto struk ke Telegram, dan pantau arus kas Anda di dashboard web secara real-time.
+            </p>
+
+            {/* Copy - Buttons */}
+            <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Link
+                href="/login"
+                className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-7 py-3.5 text-sm font-black text-slate-950 shadow-xl shadow-emerald-500/25 transition hover:from-emerald-300 hover:to-teal-300 active:scale-95"
+              >
+                <span>Mulai Sekarang — Gratis</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+
+              <a
+                href="https://t.me/FiscioBot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:border-slate-700 hover:bg-slate-800"
+              >
+                <Send className="h-4 w-4 text-sky-400" />
+                <span>Lihat Demo Bot</span>
+              </a>
+            </div>
+
+            <div className="mt-4 sm:hidden flex justify-start">
+              <PwaInstallButton />
+            </div>
+          </div>
+
+          {/* Right Column: Floating Devices with Soft Radial Glow */}
+          <div className="lg:col-span-6 flex justify-center">
+            <HeroInteractiveSetup />
+          </div>
+
         </div>
-
-        <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl sm:leading-[1.15]">
-          Kelola Arus Kas &amp; Kekayaan Tanpa{' '}
-          <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-            Rasa Malas.
-          </span>
-        </h1>
-
-        <p className="mx-auto mt-6 max-w-2xl text-base text-slate-300 sm:text-lg leading-relaxed font-normal">
-          Pencatatan konvensional membuang waktu. Kirim pesan instan atau foto struk di <strong>Telegram</strong> dalam 3 detik.
-          Pantau <em>net cash flow</em>, <em>runway</em>, dan <em>savings rate</em> di <strong>Web PWA</strong> real-time.
-        </p>
-
-        {/* Action Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
-            href="/login"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-7 py-3.5 text-sm font-black text-slate-950 shadow-xl shadow-emerald-500/25 transition hover:from-emerald-300 hover:to-teal-300 active:scale-95"
-          >
-            <span>Mulai Sekarang — Gratis</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-
-          <a
-            href="https://t.me/FiscioBot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:border-slate-700 hover:bg-slate-800"
-          >
-            <Send className="h-4 w-4 text-sky-400" />
-            <span>Coba Bot Telegram</span>
-          </a>
-        </div>
-
-        {/* Mobile PWA Install Button */}
-        <div className="mt-4 sm:hidden flex justify-center">
-          <PwaInstallButton />
-        </div>
-
-        {/* Interactive 3D Device Ecosystem Mockup */}
-        <HeroInteractiveSetup />
       </section>
 
-      {/* APPLE-STYLE ASYMMETRIC BENTO GRID */}
+      {/* 2. BENTO GRID FEATURES SECTION */}
       <AsymmetricBentoGrid />
 
-      {/* STAGGERED SCROLL-REVEAL STEPS */}
+      {/* 3. HOW IT WORKS (STAGGERED SCROLL REVEAL) */}
       <StaggeredSteps />
 
-      {/* TECHNICAL TRUST SECTION */}
+      {/* 4. TRUST & PERFORMANCE BANNER */}
       <TechnicalTrustSection />
 
-      {/* FINAL BOTTOM CTA */}
+      {/* 5. FINAL CTA */}
       <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-tr from-slate-900 via-slate-900 to-emerald-950/40 p-8 sm:p-12 text-center shadow-2xl">
           <h2 className="text-2xl sm:text-4xl font-black text-white">
-            Siap Mengambil Kendali Penuh atas Finansial Anda?
+            Kendalikan Penuh Arus Kas Anda Hari Ini.
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-xs sm:text-sm text-slate-400">
-            Gratis, tanpa biaya berlangganan. Data Anda dilindungi dengan Row Level Security Supabase.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+          <div className="mt-8 flex justify-center">
             <Link
               href="/login"
-              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-8 py-3.5 text-xs sm:text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:from-emerald-300 hover:to-teal-300 active:scale-95"
+              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-8 py-3.5 text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:from-emerald-300 hover:to-teal-300 active:scale-95"
             >
-              <span>Mulai Sekarang Gratis</span>
+              <span>Buat Akun Gratis</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -187,10 +182,7 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer className="border-t border-white/5 py-8 text-center text-xs text-slate-500">
-        <p>© {new Date().getFullYear()} Fisc.io by Fariz Achmad Faizal. Seluruh hak cipta dilindungi.</p>
-        <p className="mt-1 text-[11px] text-slate-600">
-          Built with Next.js 16, Supabase, Telegram Bot API, &amp; Tailwind CSS.
-        </p>
+        <p>© {new Date().getFullYear()} Fisc.io. Seluruh hak cipta dilindungi.</p>
       </footer>
     </div>
   );

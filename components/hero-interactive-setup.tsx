@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Send, CheckCircle2, ArrowRight, Laptop, Smartphone, Sparkles, TrendingUp } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 
 export function HeroInteractiveSetup() {
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string; sub?: string }>>([
-    { sender: 'user', text: '45000 nasi padang bca' },
-    { sender: 'bot', text: '✅ Tercatat: Rp 45.000', sub: 'Kategori: F&B • Saldo BCA -45k' },
+    { sender: 'user', text: '45k makan siang' },
+    { sender: 'bot', text: '✅ Tercatat: Rp 45.000', sub: 'F&B • BCA' },
   ]);
   const [currentInput, setCurrentInput] = useState('');
   const [activeStep, setActiveStep] = useState(0);
 
   const demoPhrases = [
-    { text: '50000 kopi susu gopay', bot: '✅ Tercatat: Rp 50.000', sub: 'F&B • GoPay' },
-    { text: '+8500000 gaji freelance bca', bot: '🟢 Pemasukan: Rp 8.500.000', sub: 'Salary • BCA' },
-    { text: '> 1500000 bca ke bibit', bot: '🔵 Transfer: Rp 1.500.000', sub: 'BCA ➔ Bibit' },
+    { text: '25k kopi susu gopay', bot: '✅ Tercatat: Rp 25.000', sub: 'F&B • GoPay' },
+    { text: '+8500000 gaji freelance', bot: '🟢 Pemasukan: Rp 8.500.000', sub: 'Salary • BCA' },
+    { text: '> 1500000 tabungan bibit', bot: '🔵 Transfer: Rp 1.500.000', sub: 'BCA ➔ Bibit' },
   ];
 
   useEffect(() => {
@@ -28,7 +28,6 @@ export function HeroInteractiveSetup() {
       } else {
         clearInterval(typeInterval);
         setTimeout(() => {
-          // Send message
           setMessages((prev) => [
             ...prev.slice(-2),
             { sender: 'user', text: targetPhrase },
@@ -36,127 +35,118 @@ export function HeroInteractiveSetup() {
           ]);
           setCurrentInput('');
 
-          // Move to next step
           setTimeout(() => {
             setActiveStep((prev) => (prev + 1) % demoPhrases.length);
-          }, 3000);
-        }, 600);
+          }, 2600);
+        }, 500);
       }
-    }, 80);
+    }, 70);
 
     return () => clearInterval(typeInterval);
   }, [activeStep]);
 
   return (
-    <div className="relative mx-auto mt-14 max-w-5xl">
-      {/* Background Central Glow */}
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-72 w-96 rounded-full bg-emerald-500/15 blur-[100px] -z-10" />
+    <div className="relative w-full">
+      {/* Soft Emerald/Teal Radial Glow Behind Devices */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[340px] w-[340px] sm:h-[420px] sm:w-[480px] rounded-full bg-emerald-500/15 blur-[120px] -z-10" />
 
-      {/* Floating 3D Device Ecosystem Mockup */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+      {/* Side-by-side floating devices */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 lg:gap-6">
         
-        {/* Device 1: Left Floating Smartphone (Telegram Chat Interface) */}
-        <div className="lg:col-span-5 relative mx-auto w-full max-w-[320px] rounded-[2.5rem] border-4 border-slate-800 bg-slate-950 p-3 shadow-2xl shadow-emerald-500/10 backdrop-blur-2xl transition hover:border-slate-700 animate-float-slow">
-          {/* Dynamic Island / Speaker */}
-          <div className="mx-auto mb-3 h-4 w-28 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/70" />
+        {/* Left Device: Smartphone with Telegram Chat UI */}
+        <div className="relative w-full max-w-[270px] sm:max-w-[250px] lg:max-w-[270px] shrink-0 rounded-[2.2rem] border border-white/10 bg-slate-950/90 p-3 shadow-2xl backdrop-blur-xl animate-float-slow">
+          {/* Dynamic Notch */}
+          <div className="mx-auto mb-2.5 h-3.5 w-24 rounded-full bg-slate-900 border border-white/5 flex items-center justify-center">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
           </div>
 
           {/* Chat Header */}
-          <div className="flex items-center gap-2.5 pb-2.5 px-2 border-b border-white/5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 font-bold text-xs">
+          <div className="flex items-center gap-2 pb-2 px-1 border-b border-white/5 text-left">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold">
               🤖
             </div>
             <div>
-              <p className="text-xs font-bold text-white flex items-center gap-1">
+              <p className="text-[11px] font-bold text-white flex items-center gap-1 leading-tight">
                 <span>Fisc.io Bot</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               </p>
-              <p className="text-[10px] text-slate-500">bot • instant webhook sync</p>
+              <p className="text-[9px] text-slate-500">bot</p>
             </div>
           </div>
 
-          {/* Messages Stream */}
-          <div className="space-y-2.5 py-3 px-1 min-h-[170px] flex flex-col justify-end text-left text-xs">
+          {/* Chat Messages */}
+          <div className="space-y-2 py-3 px-1 min-h-[140px] flex flex-col justify-end text-left text-xs">
             {messages.map((m, idx) => (
               <div
                 key={idx}
                 className={`max-w-[85%] rounded-2xl p-2.5 ${
                   m.sender === 'user'
-                    ? 'ml-auto bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-semibold rounded-br-none shadow-sm'
-                    : 'mr-auto bg-slate-900 border border-white/5 text-white rounded-bl-none shadow-sm'
+                    ? 'ml-auto bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold rounded-br-none shadow-sm'
+                    : 'mr-auto bg-slate-900/90 border border-white/5 text-white rounded-bl-none shadow-sm'
                 }`}
               >
                 <p className="text-[11px] leading-tight">{m.text}</p>
-                {m.sub && <p className="text-[9px] text-emerald-400 mt-1">{m.sub}</p>}
+                {m.sub && <p className="text-[9px] text-emerald-400 font-medium mt-0.5">{m.sub}</p>}
               </div>
             ))}
           </div>
 
-          {/* Simulated Input Bar */}
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/90 px-3 py-2 text-xs">
-            <span className="text-[11px] text-slate-300 font-mono flex-1 text-left truncate">
+          {/* Typing Input */}
+          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/90 px-2.5 py-1.5 text-xs">
+            <span className="text-[10px] text-slate-300 font-mono flex-1 text-left truncate">
               {currentInput || <span className="text-slate-600">Ketik pesan...</span>}
             </span>
-            <span className="flex h-6 w-6 items-center justify-center rounded-xl bg-emerald-500 text-slate-950">
-              <Send className="h-3 w-3" />
+            <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-400 text-slate-950">
+              <Send className="h-2.5 w-2.5" />
             </span>
           </div>
         </div>
 
-        {/* Sync Particle Line (Center Connection on Desktop) */}
-        <div className="hidden lg:flex lg:col-span-2 flex-col items-center justify-center text-center">
-          <div className="relative w-full flex items-center justify-center">
-            <div className="w-full border-t-2 border-dashed border-emerald-500/30" />
-            <div className="absolute flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 shadow-lg shadow-emerald-500/30 animate-pulse">
-              <Sparkles className="h-4 w-4" />
+        {/* Sync Particle / Animated Line (Center Connection) */}
+        <div className="hidden sm:flex flex-col items-center justify-center shrink-0">
+          <div className="relative flex items-center justify-center">
+            <div className="h-0.5 w-10 lg:w-14 border-t-2 border-dashed border-emerald-400/40" />
+            <div className="absolute flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 shadow-lg shadow-emerald-500/25 animate-pulse">
+              <Sparkles className="h-3.5 w-3.5" />
             </div>
           </div>
-          <span className="mt-2 text-[10px] font-mono uppercase tracking-wider text-emerald-400/80">
-            Realtime Sync &lt;1s
-          </span>
         </div>
 
-        {/* Device 2: Right Sleek Laptop / Dashboard Preview */}
-        <div className="lg:col-span-5 relative w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 sm:p-4 shadow-2xl backdrop-blur-2xl animate-float-reverse">
-          {/* Browser Window Controls */}
-          <div className="flex items-center justify-between pb-3 border-b border-white/5 text-[10px] text-slate-500 font-mono">
+        {/* Right Device: Web Dashboard Mockup */}
+        <div className="relative w-full max-w-[340px] lg:max-w-[380px] shrink-0 rounded-2xl border border-white/10 bg-slate-900/80 p-3.5 shadow-2xl backdrop-blur-xl animate-float-reverse text-left">
+          {/* Browser Controls */}
+          <div className="flex items-center justify-between pb-2.5 border-b border-white/5 text-[9px] text-slate-500 font-mono">
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-rose-500/70" />
               <span className="h-2 w-2 rounded-full bg-amber-500/70" />
               <span className="h-2 w-2 rounded-full bg-emerald-500/70" />
             </div>
-            <span className="text-slate-400">fisc.farlabs.my.id/dashboard</span>
-            <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
-              PROD
-            </span>
+            <span className="text-slate-400 truncate">fisc.farlabs.my.id/dashboard</span>
           </div>
 
-          {/* Dashboard Live Bento Preview */}
-          <div className="space-y-3 pt-3 text-left">
+          <div className="space-y-2.5 pt-2.5">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-white/5 bg-slate-950/70 p-3">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Net Cash Flow</span>
-                <p className="mt-0.5 text-base font-black text-emerald-400">+Rp 12.850.000</p>
+              <div className="rounded-xl border border-white/5 bg-slate-950/70 p-2.5">
+                <span className="text-[9px] uppercase font-bold text-slate-400">Net Cash Flow</span>
+                <p className="mt-0.5 text-sm sm:text-base font-black text-emerald-400">+Rp 12.850.000</p>
               </div>
-              <div className="rounded-xl border border-white/5 bg-slate-950/70 p-3">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Financial Runway</span>
-                <p className="mt-0.5 text-base font-black text-amber-400">8.4 Bulan</p>
+              <div className="rounded-xl border border-white/5 bg-slate-950/70 p-2.5">
+                <span className="text-[9px] uppercase font-bold text-slate-400">Runway</span>
+                <p className="mt-0.5 text-sm sm:text-base font-black text-amber-400">8.4 Bulan</p>
               </div>
             </div>
 
-            {/* Simulated Live Cash Flow Wave Chart */}
-            <div className="rounded-xl border border-white/5 bg-slate-950/70 p-3">
-              <div className="flex items-center justify-between text-[10px] text-slate-400 mb-2">
+            <div className="rounded-xl border border-white/5 bg-slate-950/70 p-2.5">
+              <div className="flex items-center justify-between text-[9px] text-slate-400 mb-1.5">
                 <span className="font-bold text-white">Cash Flow Timeline</span>
-                <span className="text-emerald-400">+34% vs Bln Lalu</span>
+                <span className="text-emerald-400 font-semibold">+34% vs Bln Lalu</span>
               </div>
-              <div className="flex items-end gap-1.5 h-16 w-full pt-2">
-                {[35, 60, 45, 80, 50, 95, 70, 85, 100, 75, 90].map((h, i) => (
+              <div className="flex items-end gap-1.5 h-14 w-full pt-1">
+                {[30, 55, 40, 75, 45, 90, 65, 80, 100, 70, 85].map((h, i) => (
                   <div
                     key={i}
                     style={{ height: `${h}%` }}
-                    className={`flex-1 rounded-t-sm transition-all duration-500 ${
+                    className={`flex-1 rounded-t-sm ${
                       i >= 8 ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-slate-800'
                     }`}
                   />
