@@ -72,6 +72,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { ServiceWorkerRegister } from '@/components/service-worker-register';
+
 export default function RootLayout({
   children,
 }: {
@@ -80,6 +82,7 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className="min-h-screen bg-slate-950 text-slate-50 antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

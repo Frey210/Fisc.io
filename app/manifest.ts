@@ -6,7 +6,10 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Fisc.io',
     description: 'Omnichannel Personal Finance & Cash Flow Intelligence Platform',
     start_url: '/dashboard',
+    scope: '/',
+    id: '/',
     display: 'standalone',
+    orientation: 'portrait',
     background_color: '#020617',
     theme_color: '#10b981',
     icons: [
@@ -15,6 +18,12 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
+      },
+      {
+        src: '/logo.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
       },
       {
         src: '/favicon.png',
