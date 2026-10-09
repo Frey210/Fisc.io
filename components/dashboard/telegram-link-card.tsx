@@ -19,7 +19,6 @@ export function TelegramLinkCard({ userId, isLinked, telegramChatId }: TelegramL
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const telegramDeepLink = `https://t.me/FiscioBot?start=${encodeURIComponent(userId)}`;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-xl">
@@ -43,9 +42,13 @@ export function TelegramLinkCard({ userId, isLinked, telegramChatId }: TelegramL
             </span>
           ) : (
             <a
-              href={telegramDeepLink}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`tg://resolve?domain=FiscioBot&start=${encodeURIComponent(userId)}`}
+              onClick={(e) => {
+                // If native protocol fails on desktop web, fallback to https link
+                setTimeout(() => {
+                  window.open(`https://t.me/FiscioBot?start=${encodeURIComponent(userId)}`, '_blank');
+                }, 400);
+              }}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-400 to-blue-500 px-4 py-2 text-xs font-bold text-slate-950 shadow-lg shadow-sky-500/25 transition active:scale-95 hover:from-sky-300 hover:to-blue-400"
             >
               <ExternalLink className="h-3.5 w-3.5" />

@@ -1,8 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { parseTransactionText } from '@/lib/nlp/parser';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendTelegramMessage, getTelegramFileUrl } from '@/lib/telegram/client';
 import { TelegramWebhookUpdate } from '@/types/database';
+
+// Allow serverless function to run up to 60s for background OCR tasks
+export const maxDuration = 60;
+
+// In-memory cache for recent update_ids to prevent Telegram retry spam
+const processedUpdates = new Set<number>();
+const MAX_PROCESSED_UPDATES = 500;
 
 export async function POST(request: Request) {
   // 1. Verify Telegram secret token header if configured
@@ -18,6 +25,18 @@ export async function POST(request: Request) {
     update = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+  }
+
+  // Deduplicate updates if Telegram resends the same payload
+  if (update.update_id) {
+    if (processedUpdates.has(update.update_id)) {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+    processedUpdates.add(update.update_id);
+    if (processedUpdates.size > MAX_PROCESSED_UPDATES) {
+      const oldest = processedUpdates.values().next().value;
+      if (oldest !== undefined) processedUpdates.delete(oldest);
+    }
   }
 
   const message = update.message;
@@ -105,59 +124,100 @@ export async function POST(request: Request) {
 
     // 4. Handle Photo (Receipt OCR) Ingestion
     if (message.photo && message.photo.length > 0) {
-      // Telegram sends multiple sizes, last one is the highest resolution
-      const highestResPhoto = message.photo[message.photo.length - 1];
-      
+      // Pick optimal resolution: around 700-1280px wide for rapid, accurate OCR
+      const optimalPhoto =
+        message.photo.find((p) => p.width >= 700 && p.width <= 1280) ||
+        (message.photo.length >= 2
+          ? message.photo[message.photo.length - (message.photo.length > 3 ? 2 : 1)]
+          : message.photo[message.photo.length - 1]);
+
+      // Step A: Immediately send status notification to Telegram user
       await sendTelegramMessage(chatId, `🔍 <i>Memproses struk belanja dengan OCR...</i>`);
 
-      try {
-        const fileUrl = await getTelegramFileUrl(highestResPhoto.file_id);
-        const { parseReceiptImage } = await import('@/lib/ocr/receipt-parser');
-        const ocrResult = await parseReceiptImage(fileUrl);
+      // Step B: Dispatch heavy OCR processing asynchronously via Next.js after()
+      // This immediately frees the HTTP response, returning 200 OK to Telegram in milliseconds.
+      // Telegram acknowledges the webhook instantly and will NEVER retry or cause infinite loops!
+      after(async () => {
+        try {
+          const fileUrl = await getTelegramFileUrl(optimalPhoto.file_id);
+          const { parseReceiptImage } = await import('@/lib/ocr/receipt-parser');
+          const ocrResult = await parseReceiptImage(fileUrl);
 
-        if (!ocrResult.totalAmount) {
+          if (!ocrResult.totalAmount) {
+            await sendTelegramMessage(
+              chatId,
+              `⚠️ Tidak dapat membaca nominal total dari struk secara jelas.\nSilakan masukkan secara manual melalui teks (contoh: <code>45000 struk indomaret</code>).`
+            );
+            return;
+          }
+
+          const merchant = ocrResult.merchantName || 'Struk Belanja';
+
+          // Auto-match or create Category if categoryHint found
+          let categoryId: string | null = null;
+          if (ocrResult.categoryHint) {
+            const { data: existingCat } = await supabaseAdmin
+              .from('categories')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('name', ocrResult.categoryHint)
+              .maybeSingle();
+
+            if (existingCat) {
+              categoryId = existingCat.id;
+            } else {
+              const { data: newCat } = await supabaseAdmin
+                .from('categories')
+                .insert({
+                  user_id: userId,
+                  name: ocrResult.categoryHint,
+                  type: 'EXPENSE',
+                })
+                .select('id')
+                .single();
+
+              if (newCat) categoryId = newCat.id;
+            }
+          }
+
+          // Insert Transaction from OCR
+          const { error: insertErr } = await supabaseAdmin.from('transactions').insert({
+            user_id: userId,
+            type: 'EXPENSE',
+            amount: ocrResult.totalAmount,
+            description: merchant,
+            category_id: categoryId,
+            source: 'telegram_ocr',
+            confidence_score: ocrResult.confidence,
+            date: new Date().toISOString(),
+          });
+
+          if (insertErr) {
+            await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi OCR: ${insertErr.message}`);
+            return;
+          }
+
+          const formattedAmount = new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0,
+          }).format(ocrResult.totalAmount);
+
+          const categoryTag = ocrResult.categoryHint ? `\n🏷️ <b>Kategori:</b> ${ocrResult.categoryHint}` : '';
+
           await sendTelegramMessage(
             chatId,
-            `⚠️ Tidak dapat membaca nominal total dari struk secara jelas.\nSilakan masukkan secara manual melalui teks (contoh: <code>45000 struk indomaret</code>).`
+            `🧾 <b>Struk Berhasil Diproses!</b>\n\n🔴 <b>PENGELUARAN</b>\n💰 <b>Total:</b> ${formattedAmount}\n🏪 <b>Merchant:</b> ${merchant}${categoryTag}\n🎯 <b>Confidence:</b> ${(ocrResult.confidence * 100).toFixed(0)}%`
           );
-          return NextResponse.json({ ok: true });
+        } catch (ocrErr: unknown) {
+          console.error('[OCR Error]:', ocrErr);
+          const errStr = ocrErr instanceof Error ? ocrErr.message : 'Gagal memproses gambar';
+          await sendTelegramMessage(chatId, `❌ OCR Gagal: ${errStr}`);
         }
+      });
 
-        const merchant = ocrResult.merchantName || 'Struk Belanja';
-
-        // Insert Transaction from OCR
-        const { error: insertErr } = await supabaseAdmin.from('transactions').insert({
-          user_id: userId,
-          type: 'EXPENSE',
-          amount: ocrResult.totalAmount,
-          description: merchant,
-          source: 'telegram_ocr',
-          confidence_score: ocrResult.confidence,
-          date: new Date().toISOString(),
-        });
-
-        if (insertErr) {
-          await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi OCR: ${insertErr.message}`);
-          return NextResponse.json({ ok: true });
-        }
-
-        const formattedAmount = new Intl.NumberFormat('id-ID', {
-          style: 'currency',
-          currency: 'IDR',
-          maximumFractionDigits: 0,
-        }).format(ocrResult.totalAmount);
-
-        await sendTelegramMessage(
-          chatId,
-          `🧾 <b>Struk Berhasil Diproses!</b>\n\n🔴 <b>PENGELUARAN</b>\n💰 <b>Total:</b> ${formattedAmount}\n🏪 <b>Merchant:</b> ${merchant}\n🎯 <b>Confidence:</b> ${(ocrResult.confidence * 100).toFixed(0)}%`
-        );
-
-        return NextResponse.json({ ok: true });
-      } catch (ocrErr: unknown) {
-        const errStr = ocrErr instanceof Error ? ocrErr.message : 'Gagal memproses gambar';
-        await sendTelegramMessage(chatId, `❌ OCR Gagal: ${errStr}`);
-        return NextResponse.json({ ok: true });
-      }
+      // Step C: Acknowledge Telegram webhook IMMEDIATELY
+      return NextResponse.json({ ok: true, queued: true });
     }
 
     // 5. Handle Text Ingestion
