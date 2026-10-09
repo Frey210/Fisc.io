@@ -1,7 +1,12 @@
 import { NextResponse, after } from 'next/server';
 import { parseTransactionText } from '@/lib/nlp/parser';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { sendTelegramMessage, getTelegramFileUrl } from '@/lib/telegram/client';
+import {
+  sendTelegramMessage,
+  getTelegramFileUrl,
+  answerTelegramCallback,
+  editTelegramMessage,
+} from '@/lib/telegram/client';
 import { TelegramWebhookUpdate } from '@/types/database';
 
 // Allow serverless function to run up to 60s for background OCR tasks
@@ -39,6 +44,99 @@ export async function POST(request: Request) {
     }
   }
 
+  const supabaseAdmin = createAdminClient();
+
+  // 1b. Handle Callback Query (Inline Keyboard Buttons like Account Selection or Cancel)
+  if (update.callback_query) {
+    const cb = update.callback_query;
+    const cbId = cb.id;
+    const data = cb.data || '';
+    const cbChatId = cb.message?.chat.id;
+    const messageId = cb.message?.message_id;
+
+    if (!cbChatId || !messageId) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // Acknowledge click immediately so Telegram stops loading spinner
+    await answerTelegramCallback(cbId);
+
+    try {
+      // Syntax: acc:<accountId>:<txId>
+      if (data.startsWith('acc:')) {
+        const parts = data.split(':');
+        const accountId = parts[1];
+        const txId = parts[2];
+
+        // Fetch transaction and account
+        const { data: tx } = await supabaseAdmin
+          .from('transactions')
+          .select('*')
+          .eq('id', txId)
+          .single();
+
+        const { data: account } = await supabaseAdmin
+          .from('accounts')
+          .select('*')
+          .eq('id', accountId)
+          .single();
+
+        if (tx && account) {
+          // Link transaction to selected account and mark confidence to 100%
+          await supabaseAdmin
+            .from('transactions')
+            .update({
+              account_id: accountId,
+              confidence_score: 1.0,
+            })
+            .eq('id', txId);
+
+          // Deduct from account balance
+          await supabaseAdmin
+            .from('accounts')
+            .update({
+              balance: Number(account.balance) - Number(tx.amount),
+            })
+            .eq('id', accountId);
+
+          const formattedAmount = new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0,
+          }).format(tx.amount);
+
+          await editTelegramMessage(
+            cbChatId,
+            messageId,
+            `✅ <b>Struk Terkonfirmasi & Disimpan!</b>\n\n🔴 <b>PENGELUARAN</b>\n💰 <b>Total:</b> ${formattedAmount}\n🏪 <b>Merchant:</b> ${tx.description}\n💳 <b>Sumber Dana:</b> ${account.name} (Saldo Dipotong)\n🎯 <b>Status:</b> Terverifikasi 100%`,
+            'HTML'
+          );
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      // Syntax: cancel:<txId>
+      if (data.startsWith('cancel:')) {
+        const parts = data.split(':');
+        const txId = parts[1];
+
+        // Delete the transaction from database
+        await supabaseAdmin.from('transactions').delete().eq('id', txId);
+
+        await editTelegramMessage(
+          cbChatId,
+          messageId,
+          `🗑️ <b>Transaksi Struk Dibatalkan</b>\nTransaksi telah dihapus dari sistem Fisc.io.`,
+          'HTML'
+        );
+        return NextResponse.json({ ok: true });
+      }
+    } catch (cbErr) {
+      console.error('[Callback Query Error]:', cbErr);
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const message = update.message;
   if (!message || !message.chat) {
     // Return 200 OK so Telegram stops resending non-message updates
@@ -49,8 +147,6 @@ export async function POST(request: Request) {
   const rawText = message.text?.trim() || message.caption?.trim() || '';
 
   try {
-    const supabaseAdmin = createAdminClient();
-
     // 2. Handle /start or linking command
     // Syntax: /start or /link <user_uuid>
     if (rawText.startsWith('/start') || rawText.startsWith('/link')) {
@@ -68,7 +164,7 @@ export async function POST(request: Request) {
         if (existingLink) {
           await sendTelegramMessage(
             chatId,
-            `✅ Akun Fisc.io sudah terhubung!\n\nFormat input cepat:\n• <code>50000 makan</code> (Pengeluaran)\n• <code>+8000000 gaji</code> (Pemasukan)\n• <code>> 1000000 tabungan</code> (Transfer/Simpan)`
+            `✅ Akun Fisc.io sudah terhubung!\n\nFormat input cepat:\n• <code>50000 makan</code> (Pengeluaran)\n• <code>+8000000 gaji</code> (Pemasukan)\n• <code>> 1000000 tabungan</code> (Transfer/Simpan)\n• <i>Atau langsung kirim foto struk/QRIS</i>`
           );
         } else {
           await sendTelegramMessage(
@@ -99,7 +195,7 @@ export async function POST(request: Request) {
       } else {
         await sendTelegramMessage(
           chatId,
-          `🎉 Berhasil terhubung dengan Fisc.io!\n\nSekarang Anda dapat mencatat pengeluaran kapan saja:\n• <code>25k es kopi susu</code>\n• <code>+5jt project fee</code>\n• <code>> 500k reksadana</code>`
+          `🎉 Berhasil terhubung dengan Fisc.io!\n\nSekarang Anda dapat mencatat pengeluaran kapan saja:\n• <code>25k es kopi susu</code>\n• <code>+5jt project fee</code>\n• <code>> 500k reksadana</code>\n• <i>Atau foto struk belanjaan untuk dipindai otomatis!</i>`
         );
       }
       return NextResponse.json({ ok: true });
@@ -135,8 +231,6 @@ export async function POST(request: Request) {
       await sendTelegramMessage(chatId, `🔍 <i>Memproses struk belanja dengan OCR...</i>`);
 
       // Step B: Dispatch heavy OCR processing asynchronously via Next.js after()
-      // This immediately frees the HTTP response, returning 200 OK to Telegram in milliseconds.
-      // Telegram acknowledges the webhook instantly and will NEVER retry or cause infinite loops!
       after(async () => {
         try {
           const fileUrl = await getTelegramFileUrl(optimalPhoto.file_id);
@@ -181,19 +275,23 @@ export async function POST(request: Request) {
           }
 
           // Insert Transaction from OCR
-          const { error: insertErr } = await supabaseAdmin.from('transactions').insert({
-            user_id: userId,
-            type: 'EXPENSE',
-            amount: ocrResult.totalAmount,
-            description: merchant,
-            category_id: categoryId,
-            source: 'telegram_ocr',
-            confidence_score: ocrResult.confidence,
-            date: new Date().toISOString(),
-          });
+          const { data: insertedTx, error: insertErr } = await supabaseAdmin
+            .from('transactions')
+            .insert({
+              user_id: userId,
+              type: 'EXPENSE',
+              amount: ocrResult.totalAmount,
+              description: merchant,
+              category_id: categoryId,
+              source: 'telegram_ocr',
+              confidence_score: ocrResult.confidence,
+              date: new Date().toISOString(),
+            })
+            .select('id')
+            .single();
 
-          if (insertErr) {
-            await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi OCR: ${insertErr.message}`);
+          if (insertErr || !insertedTx) {
+            await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi OCR: ${insertErr?.message}`);
             return;
           }
 
@@ -205,9 +303,41 @@ export async function POST(request: Request) {
 
           const categoryTag = ocrResult.categoryHint ? `\n🏷️ <b>Kategori:</b> ${ocrResult.categoryHint}` : '';
 
+          // Fetch user's registered accounts for instant confirmation buttons
+          const { data: userAccounts } = await supabaseAdmin
+            .from('accounts')
+            .select('id, name')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: true });
+
+          const inlineButtons: Array<Array<{ text: string; callback_data: string }>> = [];
+          if (userAccounts && userAccounts.length > 0) {
+            for (let i = 0; i < userAccounts.length; i += 2) {
+              const row = [
+                {
+                  text: `💳 ${userAccounts[i].name}`,
+                  callback_data: `acc:${userAccounts[i].id}:${insertedTx.id}`,
+                },
+              ];
+              if (userAccounts[i + 1]) {
+                row.push({
+                  text: `💳 ${userAccounts[i + 1].name}`,
+                  callback_data: `acc:${userAccounts[i + 1].id}:${insertedTx.id}`,
+                });
+              }
+              inlineButtons.push(row);
+            }
+          }
+
+          inlineButtons.push([
+            { text: '❌ Batalkan / Hapus', callback_data: `cancel:${insertedTx.id}` },
+          ]);
+
           await sendTelegramMessage(
             chatId,
-            `🧾 <b>Struk Berhasil Diproses!</b>\n\n🔴 <b>PENGELUARAN</b>\n💰 <b>Total:</b> ${formattedAmount}\n🏪 <b>Merchant:</b> ${merchant}${categoryTag}\n🎯 <b>Confidence:</b> ${(ocrResult.confidence * 100).toFixed(0)}%`
+            `🧾 <b>Struk Berhasil Diproses!</b>\n\n🔴 <b>PENGELUARAN</b>\n💰 <b>Total:</b> ${formattedAmount}\n🏪 <b>Merchant:</b> ${merchant}${categoryTag}\n🎯 <b>Confidence:</b> ${(ocrResult.confidence * 100).toFixed(0)}%\n\n👇 <b>Pilih rekening untuk memotong saldo:</b>`,
+            'HTML',
+            { inline_keyboard: inlineButtons }
           );
         } catch (ocrErr: unknown) {
           console.error('[OCR Error]:', ocrErr);

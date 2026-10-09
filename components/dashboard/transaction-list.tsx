@@ -70,15 +70,20 @@ export function TransactionList({ transactions, onEdit, onDeleted, onAddNew }: T
         const isIncome = tx.type === 'INCOME';
         const isTransfer = tx.type === 'TRANSFER';
         const isDeleting = deletingId === tx.id;
+        const isReviewNeeded =
+          tx.confidence_score !== null &&
+          tx.confidence_score !== undefined &&
+          tx.confidence_score < 0.85;
 
         return (
           <div
             key={tx.id}
-            className="group flex items-center justify-between py-4 px-2 rounded-xl transition hover:bg-slate-900/40"
+            className="group flex items-center justify-between py-3 px-1.5 sm:px-2 rounded-xl transition hover:bg-slate-900/40 gap-2 overflow-hidden"
           >
-            <div className="flex items-center gap-3.5">
+            {/* Left: Icon & Info */}
+            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border ${
                   isIncome
                     ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                     : isTransfer
@@ -87,20 +92,23 @@ export function TransactionList({ transactions, onEdit, onDeleted, onAddNew }: T
                 }`}
               >
                 {isIncome ? (
-                  <ArrowDownLeft className="h-5 w-5" />
+                  <ArrowDownLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 ) : isTransfer ? (
-                  <ArrowRightLeft className="h-5 w-5" />
+                  <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 ) : (
-                  <ArrowUpRight className="h-5 w-5" />
+                  <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 )}
               </div>
 
-              <div>
-                <p className="text-sm font-semibold text-white">{tx.description || 'Tanpa Keterangan'}</p>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>{formatDate(tx.date)}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-semibold text-white truncate">
+                  {tx.description || 'Tanpa Keterangan'}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 mt-0.5">
+                  <span className="whitespace-nowrap">{formatDate(tx.date)}</span>
                   <span>•</span>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 shrink-0">
                     {tx.source.startsWith('telegram') ? (
                       <>
                         <Smartphone className="h-3 w-3 text-sky-400" />
@@ -113,35 +121,43 @@ export function TransactionList({ transactions, onEdit, onDeleted, onAddNew }: T
                       </>
                     )}
                   </span>
+
                   {tx.confidence_score !== null && tx.confidence_score !== undefined && (
-                    <span
-                      className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
-                        tx.confidence_score < 0.85
-                          ? 'border border-amber-500/40 bg-amber-500/10 text-amber-300'
-                          : 'text-slate-400'
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(tx);
+                      }}
+                      className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition active:scale-95 ${
+                        isReviewNeeded
+                          ? 'border border-amber-500/40 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
+                          : 'text-slate-400 hover:text-slate-200'
                       }`}
+                      title={isReviewNeeded ? 'Klik untuk meninjau data struk' : 'Akurasi OCR'}
                     >
-                      {tx.confidence_score < 0.85 ? (
+                      {isReviewNeeded ? (
                         <>
-                          <AlertTriangle className="h-3 w-3 text-amber-400" />
-                          <span>Perlu Ditinjau ({(tx.confidence_score * 100).toFixed(0)}%)</span>
+                          <AlertTriangle className="h-2.5 w-2.5 text-amber-400 shrink-0" />
+                          <span>Tinjau ({(tx.confidence_score * 100).toFixed(0)}%)</span>
                         </>
                       ) : (
                         <>
-                          <Sparkles className="h-3 w-3 text-emerald-400" />
+                          <Sparkles className="h-2.5 w-2.5 text-emerald-400 shrink-0" />
                           <span>{(tx.confidence_score * 100).toFixed(0)}%</span>
                         </>
                       )}
-                    </span>
+                    </button>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            {/* Right: Amount & Actions */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <div className="text-right">
                 <span
-                  className={`text-sm font-bold ${
+                  className={`text-xs sm:text-sm font-bold whitespace-nowrap ${
                     isIncome
                       ? 'text-emerald-400'
                       : isTransfer
@@ -155,11 +171,11 @@ export function TransactionList({ transactions, onEdit, onDeleted, onAddNew }: T
               </div>
 
               {/* Action buttons (Edit & Delete) */}
-              <div className="flex items-center gap-1 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => onEdit(tx)}
                   title="Edit Transaksi"
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition active:scale-95"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
                 </button>
@@ -167,7 +183,7 @@ export function TransactionList({ transactions, onEdit, onDeleted, onAddNew }: T
                   onClick={() => handleDelete(tx.id)}
                   disabled={isDeleting}
                   title="Hapus Transaksi"
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition disabled:opacity-50"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition disabled:opacity-50 active:scale-95"
                 >
                   {isDeleting ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />

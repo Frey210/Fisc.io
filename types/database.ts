@@ -65,4 +65,20 @@ export interface TelegramWebhookUpdate {
     }>;
     caption?: string;
   };
+  callback_query?: {
+    id: string;
+    from: {
+      id: number;
+      first_name: string;
+      username?: string;
+    };
+    message?: {
+      message_id: number;
+      chat: {
+        id: number;
+      };
+      text?: string;
+    };
+    data?: string;
+  };
 }

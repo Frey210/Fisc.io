@@ -226,7 +226,7 @@ export default function DashboardClient() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row pb-24 lg:pb-0">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row pb-24 lg:pb-0 w-full max-w-full overflow-x-hidden">
       {/* 1. DESKTOP PERMANENT SIDEBAR (>= 1024px) */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 border-r border-white/5 bg-slate-950/95 backdrop-blur-2xl p-6 justify-between">
         <div className="space-y-6">
@@ -625,8 +625,8 @@ export default function DashboardClient() {
       </button>
 
       {/* 4. MOBILE BOTTOM NAVIGATION BAR (Hidden on Desktop >= 1024px) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-slate-950/90 backdrop-blur-2xl">
-        <div className="grid grid-cols-5 h-16 items-center px-1">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/10 bg-slate-950/95 backdrop-blur-2xl">
+        <div className="grid grid-cols-5 h-16 w-full max-w-md mx-auto items-center px-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -648,6 +648,7 @@ export default function DashboardClient() {
 
       {/* Transaction Modal (Add / Edit) */}
       <TransactionModal
+        key={selectedTx?.id || (isModalOpen ? 'modal-open' : 'modal-closed')}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSaved={handleDataRefresh}

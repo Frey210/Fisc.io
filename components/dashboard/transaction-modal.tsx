@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Transaction, TransactionType, Account } from '@/types/database';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -20,22 +20,45 @@ export function TransactionModal({
   accounts,
   transactionToEdit,
 }: TransactionModalProps) {
-  const [type, setType] = useState<TransactionType>(transactionToEdit?.type || 'EXPENSE');
-  const [accountId, setAccountId] = useState<string>(transactionToEdit?.account_id || '');
-  const [toAccountId, setToAccountId] = useState<string>(transactionToEdit?.to_account_id || '');
-  const [amount, setAmount] = useState<string>(
-    transactionToEdit ? String(transactionToEdit.amount) : ''
-  );
-  const [description, setDescription] = useState<string>(transactionToEdit?.description || '');
-  const [date, setDate] = useState<string>(
-    transactionToEdit?.date
-      ? new Date(transactionToEdit.date).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0]
-  );
+  const [type, setType] = useState<TransactionType>('EXPENSE');
+  const [accountId, setAccountId] = useState<string>('');
+  const [toAccountId, setToAccountId] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sync form state whenever modal opens or transactionToEdit changes
+  useEffect(() => {
+    if (transactionToEdit) {
+      setType(transactionToEdit.type || 'EXPENSE');
+      setAccountId(transactionToEdit.account_id || '');
+      setToAccountId(transactionToEdit.to_account_id || '');
+      setAmount(transactionToEdit.amount ? String(transactionToEdit.amount) : '');
+      setDescription(transactionToEdit.description || '');
+      setDate(
+        transactionToEdit.date
+          ? new Date(transactionToEdit.date).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0]
+      );
+    } else {
+      setType('EXPENSE');
+      setAccountId('');
+      setToAccountId('');
+      setAmount('');
+      setDescription('');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+    setError(null);
+  }, [transactionToEdit, isOpen]);
+
   if (!isOpen) return null;
+
+  const isLowConfidenceOCR =
+    transactionToEdit?.confidence_score !== null &&
+    transactionToEdit?.confidence_score !== undefined &&
+    transactionToEdit.confidence_score < 0.85;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +74,7 @@ export function TransactionModal({
 
     try {
       if (transactionToEdit) {
-        // Update existing transaction
+        // Update existing transaction & mark verified (confidence 1.0)
         const { error: updateError } = await supabase
           .from('transactions')
           .update({
@@ -61,13 +84,42 @@ export function TransactionModal({
             account_id: accountId || null,
             to_account_id: type === 'TRANSFER' ? toAccountId || null : null,
             date: new Date(date).toISOString(),
+            confidence_score: 1.0,
           })
           .eq('id', transactionToEdit.id)
           .eq('user_id', userId);
 
         if (updateError) throw updateError;
+
+        // Balance adjustment for updated transaction:
+        // 1. Revert old balance if transaction previously had an account
+        if (transactionToEdit.account_id) {
+          const oldAcc = accounts.find((a) => a.id === transactionToEdit.account_id);
+          if (oldAcc) {
+            const revertDelta =
+              transactionToEdit.type === 'INCOME'
+                ? -Number(transactionToEdit.amount)
+                : Number(transactionToEdit.amount);
+            await supabase
+              .from('accounts')
+              .update({ balance: Number(oldAcc.balance) + revertDelta })
+              .eq('id', oldAcc.id);
+          }
+        }
+
+        // 2. Apply new balance to selected account
+        if (accountId) {
+          const newAcc = accounts.find((a) => a.id === accountId);
+          if (newAcc) {
+            const applyDelta = type === 'INCOME' ? parsedAmount : -parsedAmount;
+            await supabase
+              .from('accounts')
+              .update({ balance: Number(newAcc.balance) + applyDelta })
+              .eq('id', accountId);
+          }
+        }
       } else {
-        // Insert new transaction
+        // Insert new manual transaction
         const { error: insertError } = await supabase.from('transactions').insert({
           user_id: userId,
           type,
@@ -81,27 +133,27 @@ export function TransactionModal({
         });
 
         if (insertError) throw insertError;
-      }
 
-      // Update account balance automatically if account specified
-      if (accountId) {
-        const selectedAcc = accounts.find((a) => a.id === accountId);
-        if (selectedAcc) {
-          const delta = type === 'INCOME' ? parsedAmount : -parsedAmount;
-          await supabase
-            .from('accounts')
-            .update({ balance: Number(selectedAcc.balance) + delta })
-            .eq('id', accountId);
+        // Apply balance to account if chosen
+        if (accountId) {
+          const selectedAcc = accounts.find((a) => a.id === accountId);
+          if (selectedAcc) {
+            const delta = type === 'INCOME' ? parsedAmount : -parsedAmount;
+            await supabase
+              .from('accounts')
+              .update({ balance: Number(selectedAcc.balance) + delta })
+              .eq('id', accountId);
+          }
         }
-      }
 
-      if (type === 'TRANSFER' && toAccountId) {
-        const destAcc = accounts.find((a) => a.id === toAccountId);
-        if (destAcc) {
-          await supabase
-            .from('accounts')
-            .update({ balance: Number(destAcc.balance) + parsedAmount })
-            .eq('id', toAccountId);
+        if (type === 'TRANSFER' && toAccountId) {
+          const destAcc = accounts.find((a) => a.id === toAccountId);
+          if (destAcc) {
+            await supabase
+              .from('accounts')
+              .update({ balance: Number(destAcc.balance) + parsedAmount })
+              .eq('id', toAccountId);
+          }
         }
       }
 
@@ -119,9 +171,13 @@ export function TransactionModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
       <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <h3 className="text-base font-bold text-white">
-            {transactionToEdit ? 'Edit Transaksi' : 'Tambah Transaksi Manual'}
+            {isLowConfidenceOCR
+              ? 'Tinjau Hasil Scan Struk'
+              : transactionToEdit
+              ? 'Edit Transaksi'
+              : 'Tambah Transaksi Manual'}
           </h3>
           <button
             onClick={onClose}
@@ -131,8 +187,23 @@ export function TransactionModal({
           </button>
         </div>
 
+        {/* OCR Review Warning Banner */}
+        {isLowConfidenceOCR && (
+          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+            <div>
+              <p className="font-semibold">
+                Konfirmasi Pembacaan OCR ({(transactionToEdit.confidence_score! * 100).toFixed(0)}%)
+              </p>
+              <p className="mt-0.5 text-slate-400 leading-relaxed text-[11px]">
+                Data telah otomatis terisi dari struk. Silakan periksa kembali nominal dan pilih rekening untuk memotong saldo Anda.
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
-          <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+          <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
             {error}
           </div>
         )}
@@ -291,7 +362,13 @@ export function TransactionModal({
                   <span>Menyimpan...</span>
                 </>
               ) : (
-                <span>{transactionToEdit ? 'Simpan Perubahan' : 'Tambah Transaksi'}</span>
+                <span>
+                  {isLowConfidenceOCR
+                    ? 'Verifikasi & Simpan'
+                    : transactionToEdit
+                    ? 'Simpan Perubahan'
+                    : 'Tambah Transaksi'}
+                </span>
               )}
             </button>
           </div>
