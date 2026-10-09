@@ -47,75 +47,83 @@ export function AsymmetricBentoGrid() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* ROW 1 - CARD 1: Natural Language Telegram (md:col-span-2) */}
-        <SpotlightCard className="md:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[380px]">
-          {/* Header Copy */}
-          <div className="z-10 relative max-w-md">
-            <h3 className="text-2xl sm:text-3xl font-black text-white">Natural Language Telegram</h3>
-            <p className="mt-2 text-sm sm:text-base text-white/70 leading-relaxed font-normal">
-              Ketik &quot;45k makan siang&quot;, AI langsung mengenali nominal dan kategori.
-            </p>
-          </div>
-
-          {/* Chat Mockup: Relative on Mobile (w-full, fully visible), Absolute Bleed on Desktop */}
-          <div className="relative mt-6 mx-auto w-full md:w-auto md:absolute md:-bottom-4 md:-right-4 md:w-[60%] max-w-[460px] rounded-2xl md:rounded-3xl border border-white/15 bg-slate-950/95 p-4 sm:p-5 shadow-2xl backdrop-blur-2xl transition-transform duration-500 group-hover:scale-[1.02] text-left z-0">
-            {/* Telegram App Bar */}
-            <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 font-bold text-xs">
-                🤖
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>Fisc.io Bot</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                </p>
-                <p className="text-[10px] text-slate-500">bot • online</p>
-              </div>
+        <SpotlightCard className="md:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[400px]">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center w-full h-full">
+            
+            {/* Left Column: Clean Copy & Explanations (5 cols) */}
+            <div className="md:col-span-5 flex flex-col justify-center">
+              <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                Natural Language Telegram
+              </h3>
+              <p className="mt-3 text-sm sm:text-base text-white/70 leading-relaxed font-normal">
+                Ketik &quot;45k makan siang&quot;, AI langsung mengenali nominal dan kategori.
+              </p>
             </div>
 
-            {/* Live Message Thread */}
-            <div className="space-y-2.5 py-3 min-h-[110px] flex flex-col justify-end text-xs">
-              <div className="ml-auto max-w-[85%] rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold p-2.5 rounded-br-none shadow-md">
-                <p className="text-xs">25k kopi padu rasa</p>
-              </div>
-              <div className="mr-auto max-w-[85%] rounded-2xl bg-slate-900 border border-white/10 text-white p-2.5 rounded-bl-none shadow-md">
-                <p className="text-xs">✅ Tercatat: Rp 25.000</p>
-                <p className="text-[10px] text-emerald-400 mt-0.5">Kategori: F&amp;B • GoPay</p>
-              </div>
-
-              {/* Active animated prompt bubble */}
-              {displayText && (
-                <div className="ml-auto max-w-[85%] rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold p-2.5 rounded-br-none shadow-md flex items-center gap-1">
-                  <span>{displayText}</span>
-                  <span className="inline-block h-3.5 w-1 bg-slate-950 animate-pulse" />
+            {/* Right Column: Clean, Stable Telegram Chat Window with Fixed Heights (7 cols) */}
+            <div className="md:col-span-7 w-full rounded-2xl border border-white/15 bg-slate-950/90 p-4 shadow-2xl backdrop-blur-2xl text-left">
+              {/* Telegram App Bar */}
+              <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 font-bold text-xs">
+                  🤖
                 </div>
-              )}
+                <div>
+                  <p className="text-xs font-bold text-white flex items-center gap-1.5 leading-none">
+                    <span>Fisc.io Bot</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">bot • online</p>
+                </div>
+              </div>
 
-              {/* Instant success response bubble */}
-              {showSuccess && (
-                <div className="mr-auto max-w-[85%] rounded-2xl bg-slate-900 border border-emerald-500/40 text-white p-2.5 rounded-bl-none shadow-lg shadow-emerald-500/10">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>✅ Tercatat: Rp 45.000</span>
+              {/* Chat Thread Container with Fixed Height to Prevent Size Glitches */}
+              <div className="h-[180px] py-2 flex flex-col justify-end space-y-2 text-xs overflow-hidden">
+                {/* Message 1 (Bot History) */}
+                <div className="mr-auto max-w-[85%] rounded-2xl bg-slate-900 border border-white/10 text-white p-2.5 rounded-bl-none shadow-sm">
+                  <p className="text-xs">✅ Tercatat: Rp 25.000</p>
+                  <p className="text-[10px] text-emerald-400 mt-0.5">Kategori: F&amp;B • GoPay</p>
+                </div>
+
+                {/* Message 2 (User Typing Target Bubble with Fixed Container) */}
+                <div className="ml-auto max-w-[85%] min-h-[36px] flex items-center">
+                  <div className="rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold px-3 py-2 rounded-br-none shadow-sm flex items-center gap-1">
+                    <span className="text-xs">{displayText || '\u00A0'}</span>
+                    <span className="inline-block h-3.5 w-1 bg-slate-950 animate-pulse" />
                   </div>
-                  <p className="text-[10px] text-slate-300 mt-0.5">Kategori: F&amp;B • Akun BCA dipotong</p>
                 </div>
-              )}
-            </div>
 
-            {/* Input Composer */}
-            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-slate-400 font-mono">
-              <span className="text-slate-300 truncate text-[11px]">
-                {displayText || 'Ketik pesan pengeluaran...'}
-              </span>
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-400 text-slate-950 shrink-0 ml-2">
-                <Send className="h-2.5 w-2.5" />
+                {/* Message 3 (Bot Confirmation Bubble with Reserved Height) */}
+                <div className="h-[44px] flex items-center">
+                  <div
+                    className={`mr-auto max-w-[88%] rounded-2xl bg-slate-900 border border-emerald-500/40 text-white px-3 py-1.5 rounded-bl-none shadow-sm transition-all duration-300 ${
+                      showSuccess ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      <span>✅ Tercatat: Rp 45.000</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">F&amp;B • Akun BCA dipotong</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Input Composer */}
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-slate-400 font-mono mt-1">
+                <span className="text-slate-300 truncate text-[11px]">
+                  {displayText || 'Ketik pesan pengeluaran...'}
+                </span>
+                <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-400 text-slate-950 shrink-0 ml-2">
+                  <Send className="h-2.5 w-2.5" />
+                </div>
               </div>
             </div>
+
           </div>
         </SpotlightCard>
 
         {/* ROW 1 - CARD 2: OCR Smart Scanner (md:col-span-1) */}
-        <SpotlightCard className="md:col-span-1 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[380px]">
+        <SpotlightCard className="md:col-span-1 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[400px]">
           <div className="z-10 relative">
             <h3 className="text-xl sm:text-2xl font-black text-white">OCR Smart Scanner</h3>
             <p className="mt-2 text-sm text-white/70 leading-relaxed font-normal">
