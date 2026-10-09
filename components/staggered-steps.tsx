@@ -46,16 +46,21 @@ export function StaggeredSteps() {
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.5, delay: idx * 0.15 }}
             >
-              <SpotlightCard className="h-full rounded-2xl border border-white/10 bg-slate-900/60 p-6 shadow-xl backdrop-blur-md flex flex-col justify-between text-left">
-                <div>
-                  <div className="flex items-center justify-between mb-5">
-                    <span className="font-mono text-2xl font-black text-slate-700">{item.step}</span>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                      <Icon className="h-5 w-5" />
-                    </div>
+              <SpotlightCard className="h-full min-h-[200px] rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-7 shadow-xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden">
+                {/* Massive low-opacity watermark number filling void */}
+                <span className="pointer-events-none absolute -bottom-4 -right-2 select-none font-mono text-8xl sm:text-9xl font-black text-white/[0.04] leading-none z-0">
+                  {item.step}
+                </span>
+
+                {/* Layered descriptive text & icon */}
+                <div className="relative z-10">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-5">
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-base font-bold text-white">{item.title}</h3>
-                  <p className="mt-1.5 text-xs sm:text-sm text-slate-400 leading-relaxed">{item.desc}</p>
+                  <h3 className="text-lg font-bold text-white">{item.title}</h3>
+                  <p className="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                    {item.desc}
+                  </p>
                 </div>
               </SpotlightCard>
             </motion.div>
