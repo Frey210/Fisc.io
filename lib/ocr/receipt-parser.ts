@@ -1,4 +1,13 @@
 import { createWorker } from 'tesseract.js';
+// Ensure Next.js file tracer includes these worker dependencies in serverless output
+// @ts-ignore
+import 'bmp-js';
+// @ts-ignore
+import 'zlibjs';
+// @ts-ignore
+import 'is-url';
+// @ts-ignore
+import 'wasm-feature-detect';
 
 export interface ReceiptOCRResult {
   rawText: string;
