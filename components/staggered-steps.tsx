@@ -58,7 +58,7 @@ export function StaggeredSteps() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="text-lg font-bold text-white">{item.title}</h3>
-                  <p className="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                  <p className="mt-2 text-xs sm:text-sm text-white/70 leading-relaxed font-normal">
                     {item.desc}
                   </p>
                 </div>

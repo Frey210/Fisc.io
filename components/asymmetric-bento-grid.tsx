@@ -19,14 +19,12 @@ export function AsymmetricBentoGrid() {
           setDisplayText(fullText.slice(0, displayText.length + 1));
         }, 90);
       } else {
-        // Finished typing phrase, show success bubble
         setShowSuccess(true);
         timeout = setTimeout(() => {
           setIsTyping(false);
         }, 2200);
       }
     } else {
-      // Pause then reset
       setShowSuccess(false);
       timeout = setTimeout(() => {
         setDisplayText('');
@@ -45,49 +43,48 @@ export function AsymmetricBentoGrid() {
         </h2>
       </div>
 
-      {/* Dense Bento Grid Layout with Bleed Techniques */}
+      {/* Strict 3-column Bento Grid on Desktop */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* CARD 1: Natural Language Telegram (Spans 2 cols, 2 rows) */}
-        <SpotlightCard className="md:col-span-2 md:row-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[380px] sm:min-h-[420px]">
+        {/* ROW 1 - CARD 1: Natural Language Telegram (md:col-span-2) */}
+        <SpotlightCard className="md:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[380px]">
           {/* Header Copy */}
           <div className="z-10 relative max-w-md">
             <h3 className="text-2xl sm:text-3xl font-black text-white">Natural Language Telegram</h3>
-            <p className="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
+            <p className="mt-2 text-sm sm:text-base text-white/70 leading-relaxed font-normal">
               Ketik &quot;45k makan siang&quot;, AI langsung mengenali nominal dan kategori.
             </p>
           </div>
 
-          {/* Oversized Bleeding Telegram Chat Mockup (breaks right & bottom edges) */}
-          <div className="absolute -bottom-8 -right-6 sm:-bottom-10 sm:-right-8 w-[92%] sm:w-[480px] rounded-3xl border border-white/15 bg-slate-950/95 p-4 sm:p-5 shadow-2xl backdrop-blur-2xl transition-transform duration-500 group-hover:scale-[1.02] text-left z-0">
+          {/* Chat Mockup: Relative on Mobile (w-full, fully visible), Absolute Bleed on Desktop */}
+          <div className="relative mt-6 mx-auto w-full md:w-auto md:absolute md:-bottom-4 md:-right-4 md:w-[60%] max-w-[460px] rounded-2xl md:rounded-3xl border border-white/15 bg-slate-950/95 p-4 sm:p-5 shadow-2xl backdrop-blur-2xl transition-transform duration-500 group-hover:scale-[1.02] text-left z-0">
             {/* Telegram App Bar */}
-            <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 font-bold text-sm">
+            <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 font-bold text-xs">
                 🤖
               </div>
               <div>
                 <p className="text-xs font-bold text-white flex items-center gap-1.5">
                   <span>Fisc.io Bot</span>
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 </p>
                 <p className="text-[10px] text-slate-500">bot • online</p>
               </div>
             </div>
 
             {/* Live Message Thread */}
-            <div className="space-y-3 py-4 min-h-[130px] flex flex-col justify-end text-xs">
-              {/* Previous user history */}
-              <div className="ml-auto max-w-[85%] rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold p-3 rounded-br-none shadow-md">
+            <div className="space-y-2.5 py-3 min-h-[110px] flex flex-col justify-end text-xs">
+              <div className="ml-auto max-w-[85%] rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold p-2.5 rounded-br-none shadow-md">
                 <p className="text-xs">25k kopi padu rasa</p>
               </div>
-              <div className="mr-auto max-w-[85%] rounded-2xl bg-slate-900 border border-white/10 text-white p-3 rounded-bl-none shadow-md">
+              <div className="mr-auto max-w-[85%] rounded-2xl bg-slate-900 border border-white/10 text-white p-2.5 rounded-bl-none shadow-md">
                 <p className="text-xs">✅ Tercatat: Rp 25.000</p>
                 <p className="text-[10px] text-emerald-400 mt-0.5">Kategori: F&amp;B • GoPay</p>
               </div>
 
               {/* Active animated prompt bubble */}
               {displayText && (
-                <div className="ml-auto max-w-[85%] rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold p-3 rounded-br-none shadow-md flex items-center gap-1">
+                <div className="ml-auto max-w-[85%] rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold p-2.5 rounded-br-none shadow-md flex items-center gap-1">
                   <span>{displayText}</span>
                   <span className="inline-block h-3.5 w-1 bg-slate-950 animate-pulse" />
                 </div>
@@ -95,44 +92,44 @@ export function AsymmetricBentoGrid() {
 
               {/* Instant success response bubble */}
               {showSuccess && (
-                <div className="mr-auto max-w-[85%] rounded-2xl bg-slate-900 border border-emerald-500/40 text-white p-3 rounded-bl-none shadow-lg shadow-emerald-500/10">
+                <div className="mr-auto max-w-[85%] rounded-2xl bg-slate-900 border border-emerald-500/40 text-white p-2.5 rounded-bl-none shadow-lg shadow-emerald-500/10">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                    <CheckCircle2 className="h-4 w-4" />
+                    <CheckCircle2 className="h-3.5 w-3.5" />
                     <span>✅ Tercatat: Rp 45.000</span>
                   </div>
-                  <p className="text-[10px] text-slate-300 mt-1">Kategori: F&amp;B • Akun BCA dipotong</p>
+                  <p className="text-[10px] text-slate-300 mt-0.5">Kategori: F&amp;B • Akun BCA dipotong</p>
                 </div>
               )}
             </div>
 
             {/* Input Composer */}
-            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900 px-3.5 py-2.5 text-xs text-slate-400 font-mono">
-              <span className="text-slate-300 truncate">
+            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-slate-400 font-mono">
+              <span className="text-slate-300 truncate text-[11px]">
                 {displayText || 'Ketik pesan pengeluaran...'}
               </span>
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-400 text-slate-950 shrink-0 ml-2">
-                <Send className="h-3 w-3" />
+              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-400 text-slate-950 shrink-0 ml-2">
+                <Send className="h-2.5 w-2.5" />
               </div>
             </div>
           </div>
         </SpotlightCard>
 
-        {/* CARD 2: OCR Smart Scanner (Spans 1 col, 2 rows) */}
-        <SpotlightCard className="md:col-span-1 md:row-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-7 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[380px] sm:min-h-[420px]">
+        {/* ROW 1 - CARD 2: OCR Smart Scanner (md:col-span-1) */}
+        <SpotlightCard className="md:col-span-1 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[380px]">
           <div className="z-10 relative">
             <h3 className="text-xl sm:text-2xl font-black text-white">OCR Smart Scanner</h3>
-            <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+            <p className="mt-2 text-sm text-white/70 leading-relaxed font-normal">
               Kirim foto struk, total belanja otomatis tercatat.
             </p>
           </div>
 
           {/* Tall glowing receipt stretching to the bottom edge */}
-          <div className="relative mt-6 -mb-8 mx-auto w-full max-w-[280px] rounded-t-2xl border-x border-t border-white/15 bg-slate-950/95 p-4 sm:p-5 shadow-2xl text-left font-mono text-xs flex flex-col justify-between min-h-[260px] pb-10">
+          <div className="relative mt-6 -mb-8 mx-auto w-full max-w-[260px] rounded-t-2xl border-x border-t border-white/15 bg-slate-950/95 p-4 sm:p-5 shadow-2xl text-left font-mono text-xs flex flex-col justify-between min-h-[240px] pb-10">
             {/* Sweeping Neon Green Laser Line */}
             <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_20px_#10b981] animate-laser z-20 pointer-events-none" />
 
-            <div className="space-y-3 z-10">
-              <div className="flex items-center justify-between border-b border-dashed border-slate-800 pb-2.5">
+            <div className="space-y-2.5 z-10">
+              <div className="flex items-center justify-between border-b border-dashed border-slate-800 pb-2">
                 <span className="font-bold text-white text-xs tracking-wider">INDOMARET POINT</span>
                 <span className="text-[10px] text-slate-500">12:43 WIB</span>
               </div>
@@ -152,30 +149,30 @@ export function AsymmetricBentoGrid() {
               </div>
             </div>
 
-            <div className="border-t border-dashed border-slate-800 pt-3 flex justify-between items-baseline font-bold z-10">
+            <div className="border-t border-dashed border-slate-800 pt-2.5 flex justify-between items-baseline font-bold z-10">
               <span className="text-[11px] text-slate-400 uppercase">TOTAL DIBAYAR</span>
               <span className="text-lg font-black text-emerald-400">Rp 40.000</span>
             </div>
           </div>
         </SpotlightCard>
 
-        {/* CARD 3: Financial Runway (Spans 1 col, 1 row on Desktop or fits neatly) */}
-        <SpotlightCard className="md:col-span-3 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-center items-center text-center relative overflow-hidden">
-          <div className="max-w-xl">
+        {/* ROW 2 - CARD 3: Financial Runway (md:col-span-1, centered) */}
+        <SpotlightCard className="md:col-span-1 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-center items-center text-center relative overflow-hidden min-h-[300px]">
+          <div className="max-w-xs">
             <h3 className="text-xl sm:text-2xl font-black text-white">Financial Runway</h3>
-            <p className="mt-1.5 text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+            <p className="mt-2 text-sm text-white/70 leading-relaxed font-normal">
               Prediksi akurat berapa lama dana Anda bertahan hidup.
             </p>
           </div>
 
-          <div className="mt-4 w-full max-w-md flex flex-col items-center">
+          <div className="mt-6 w-full max-w-xs flex flex-col items-center">
             {/* Massive Glowing Number */}
-            <div className="text-5xl sm:text-6xl font-black text-emerald-400 tracking-tight drop-shadow-[0_0_25px_rgba(16,185,129,0.35)]">
+            <div className="text-5xl font-black text-emerald-400 tracking-tight drop-shadow-[0_0_25px_rgba(16,185,129,0.35)]">
               7.2 Bulan
             </div>
 
             {/* Glowing progress bar filling the horizontal width */}
-            <div className="mt-4 h-3.5 w-full rounded-full bg-slate-900 border border-white/10 p-0.5 overflow-hidden shadow-inner">
+            <div className="mt-4 h-3 w-full rounded-full bg-slate-900 border border-white/10 p-0.5 overflow-hidden shadow-inner">
               <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-teal-400 via-emerald-400 to-emerald-300 shadow-[0_0_15px_#10b981]" />
             </div>
 
@@ -187,22 +184,22 @@ export function AsymmetricBentoGrid() {
           </div>
         </SpotlightCard>
 
-        {/* CARD 4: Multi-Wallet Sync (Full Width - Spans all 3 cols) */}
-        <SpotlightCard className="md:col-span-3 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-md text-left relative overflow-hidden">
-          <div className="mb-6">
+        {/* ROW 2 - CARD 4: Multi-Wallet Sync (md:col-span-2) */}
+        <SpotlightCard className="md:col-span-2 rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-2xl backdrop-blur-md flex flex-col justify-between text-left relative overflow-hidden min-h-[300px]">
+          <div>
             <h3 className="text-2xl font-black text-white">Multi-Wallet Sync</h3>
-            <p className="mt-1 text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+            <p className="mt-2 text-sm text-white/70 leading-relaxed font-normal">
               Pantau BCA, GoPay, dan Tunai dalam satu pintu.
             </p>
           </div>
 
-          {/* Internal Grid distributing 4 wallets evenly with sparkline SVG charts */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Internal Grid: 2x2 on Mobile, 4-Cols on Desktop to prevent massive height */}
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3.5">
             {[
               {
                 name: 'Bank BCA',
-                type: 'Rekening Utama',
-                bal: 'Rp 24.500.000',
+                type: 'Rekening',
+                bal: 'Rp 24,5 Jt',
                 color: 'text-sky-400',
                 sparkPath: 'M0 24 Q 25 15, 50 18 T 100 8 T 150 14 T 200 4',
                 sparkStroke: '#38bdf8',
@@ -210,23 +207,23 @@ export function AsymmetricBentoGrid() {
               {
                 name: 'GoPay',
                 type: 'E-Wallet',
-                bal: 'Rp 850.000',
+                bal: 'Rp 850 Rb',
                 color: 'text-emerald-400',
                 sparkPath: 'M0 20 Q 25 24, 50 10 T 100 16 T 150 6 T 200 2',
                 sparkStroke: '#34d399',
               },
               {
                 name: 'Bibit',
-                type: 'Portofolio Investasi',
-                bal: 'Rp 15.000.000',
+                type: 'Investasi',
+                bal: 'Rp 15,0 Jt',
                 color: 'text-amber-400',
                 sparkPath: 'M0 22 Q 25 18, 50 20 T 100 12 T 150 8 T 200 2',
                 sparkStroke: '#fbbf24',
               },
               {
                 name: 'Tunai',
-                type: 'Uang Fisik',
-                bal: 'Rp 650.000',
+                type: 'Fisik',
+                bal: 'Rp 650 Rb',
                 color: 'text-teal-400',
                 sparkPath: 'M0 14 Q 25 16, 50 14 T 100 18 T 150 12 T 200 14',
                 sparkStroke: '#2dd4bf',
@@ -234,20 +231,20 @@ export function AsymmetricBentoGrid() {
             ].map((w, idx) => (
               <div
                 key={idx}
-                className="rounded-2xl border border-white/10 bg-slate-950/80 p-4 flex flex-col justify-between shadow-xl relative overflow-hidden"
+                className="rounded-2xl border border-white/10 bg-slate-950/80 p-3.5 flex flex-col justify-between shadow-xl relative overflow-hidden"
               >
                 <div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold uppercase">
-                    <span>{w.name}</span>
-                    <span className="text-[10px] text-slate-600 font-mono">{w.type}</span>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold uppercase">
+                    <span className="truncate">{w.name}</span>
+                    <span className="text-[9px] text-slate-600 font-mono">{w.type}</span>
                   </div>
-                  <div className={`mt-2 text-xl font-black font-mono tracking-tight ${w.color}`}>
+                  <div className={`mt-1.5 text-base sm:text-lg font-black font-mono tracking-tight ${w.color}`}>
                     {w.bal}
                   </div>
                 </div>
 
                 {/* Mini Soft-Opacity SVG Sparkline Chart */}
-                <div className="mt-4 h-9 w-full">
+                <div className="mt-3 h-7 w-full">
                   <svg className="w-full h-full overflow-visible" viewBox="0 0 200 28" fill="none">
                     <path
                       d={w.sparkPath}
