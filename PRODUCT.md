@@ -12,7 +12,7 @@ Fisc.io records personal finances through Telegram text and receipt images, and 
 Existing Next.js application with Supabase authentication, Telegram linking, NLP transaction parsing, receipt OCR, accounts, cash flow, savings rate and runway views. Preserve authentication, dashboard routes and PWA installation. Landing examples are illustrative, never real account data.
 
 ## Brand Commitments
-Indonesian copy, existing Fisc.io name and logo. User approved a warm editorial landing page with green accents and stylized 3D devices based on the incumbent hero. User chose code-first implementation.
+Indonesian copy, existing Fisc.io name and logo. User prefers the original dark slate and emerald product language. The landing page keeps that identity while using stylized interactive 3D devices based on the incumbent hero. User chose code-first implementation.
 
 ## Evidence on Hand
 PRD.md, existing implementation and public/logo.svg. No verified uptime or latency measurements provided.

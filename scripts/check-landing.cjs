@@ -30,7 +30,7 @@ async page => {
   const stoppedFrame = await canvas.screenshot();
   await page.waitForTimeout(350);
   assert(stoppedFrame.equals(await canvas.screenshot()), 'Pause must stop idle animation');
-  assert(await page.locator('.hero-intro .landing-button').getAttribute('href') === '/login', 'Account action must preserve login route');
+  assert(await page.getByRole('link', { name: /Mulai Sekarang/ }).getAttribute('href') === '/login', 'Account action must preserve login route');
   assert(!(await page.locator('meta[name="viewport"]').getAttribute('content')).includes('maximum-scale=1'), 'Page must allow pinch zoom');
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
