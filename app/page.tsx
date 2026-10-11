@@ -11,10 +11,11 @@ import { AsymmetricBentoGrid } from '@/components/asymmetric-bento-grid';
 import { StaggeredSteps } from '@/components/staggered-steps';
 import { TechnicalTrustSection } from '@/components/technical-trust';
 import { FloatingBackgroundAssets } from '@/components/floating-background-assets';
-import { ArrowRight, Send } from 'lucide-react';
+import { ArrowRight, Send, Play, X, Sparkles } from 'lucide-react';
 
 export default function LandingPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -131,6 +132,15 @@ export default function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
 
+              <button
+                type="button"
+                onClick={() => setShowVideoModal(true)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-6 py-3.5 text-sm font-bold text-emerald-300 backdrop-blur-md transition hover:border-emerald-400 hover:bg-emerald-500/20 active:scale-95 shadow-lg shadow-emerald-500/10"
+              >
+                <Play className="h-4 w-4 fill-emerald-400 text-emerald-400" />
+                <span>Tonton Intro (15s)</span>
+              </button>
+
               <a
                 href="https://t.me/FiscioBot"
                 target="_blank"
@@ -138,7 +148,7 @@ export default function LandingPage() {
                 className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:border-slate-700 hover:bg-slate-800"
               >
                 <Send className="h-4 w-4 text-sky-400" />
-                <span>Lihat Demo Bot</span>
+                <span>Demo Bot</span>
               </a>
             </div>
 
@@ -186,6 +196,51 @@ export default function LandingPage() {
       <footer className="border-t border-white/5 py-8 text-center text-xs text-slate-500">
         <p>© {new Date().getFullYear()} Fisc.io. Seluruh hak cipta dilindungi.</p>
       </footer>
+
+      {/* 15s Motion Intro Modal */}
+      {showVideoModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
+          onClick={() => setShowVideoModal(false)}
+        >
+          <div 
+            className="relative w-full max-w-5xl rounded-3xl border border-white/10 bg-slate-950 p-4 sm:p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4 px-2">
+              <div className="flex items-center gap-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
+                  Fisc.io 15s Motion Showcase (120 BPM)
+                </span>
+                <a
+                  href="/intro-video.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden sm:inline-block text-[11px] font-semibold text-emerald-400 hover:underline ml-2"
+                >
+                  ↗ Buka Fullscreen
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowVideoModal(false)}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="relative w-full overflow-hidden rounded-2xl aspect-video border border-white/10 bg-black shadow-inner">
+              <iframe
+                src="/intro-video.html"
+                title="Fisc.io 15s Motion Intro"
+                className="h-full w-full border-0"
+                allow="autoplay"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

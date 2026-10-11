@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fisc.io — 15s Motion Intro (120 BPM)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background: #030712;
+      color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100vw;
+    }
+
+    /* Fixed 1920x1080 viewport canvas */
+    #viewport-container {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: center center;
+      background: #060913;
+      overflow: hidden;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    #stage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 960px 540px;
+      overflow: hidden;
+    }
+
+    /* Background Grid */
+    .bg-grid {
+      position: absolute;
+      inset: -200px;
+      background-size: 80px 80px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      pointer-events: none;
+    }
+
+    /* Through-line Object: The Emerald Token */
+    #through-line {
+      position: absolute;
+      z-index: 100;
+      pointer-events: none;
+      transform-origin: center center;
+    }
+    #through-line-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      box-shadow: 0 0 40px rgba(16, 185, 129, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Vector Virtual Cursor */
+    #virtual-cursor {
+      position: absolute;
+      z-index: 150;
+      pointer-events: none;
+      width: 32px;
+      height: 32px;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+    }
+
+    /* Scene Layer Wrappers */
+    .scene {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    /* Controls HUD */
+    #hud {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 10px 20px;
+      border-radius: 9999px;
+      z-index: 999;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    #hud button {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    #hud button:hover {
+      background: #10b981;
+      color: #022c22;
+      border-color: #10b981;
+    }
+    #scrubber {
+      width: 280px;
+      accent-color: #10b981;
+      cursor: pointer;
+    }
+    #timecode {
+      font-family: monospace;
+      color: #10b981;
+      font-weight: 700;
+      min-width: 65px;
+    }
+    #beat-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1920x1080 Viewport Canvas -->
+  <div id="viewport-container">
+    <div id="stage">
+      <div class="bg-grid"></div>
+
+      <!-- Through-Line Object (The Emerald Token) -->
+      <div id="through-line">
+        <div id="through-line-inner">
+          <svg id="through-line-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#090d16" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Vector Cursor -->
+      <svg id="virtual-cursor" viewBox="0 0 24 24" fill="none">
+        <path d="M4 3L11.5 21L14.5 13.5L22 10.5L4 3Z" fill="#ffffff" stroke="#090d16" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+
+      <!-- SCENE 1: THE HOOK (0.0s - 2.0s, Beats 1 - 4) -->
+      <div id="scene-hook" class="scene">
+        <div id="hook-text-1" style="font-size: 82px; font-weight: 900; letter-spacing: -0.04em; color: #ffffff; text-align: center; line-height: 1.1;">
+          UANG KELUAR <span style="color: #10b981;">KE MANA?</span>
+        </div>
+        <div id="hook-text-2" style="font-size: 46px; font-weight: 800; color: #94a3b8; text-align: center; margin-top: 24px; letter-spacing: -0.02em;">
+          STRUK HILANG. CATATAN LUPA.
+        </div>
+      </div>
+
+      <!-- SCENE 2: TELEGRAM INGESTION & OCR (2.0s - 6.0s, Beats 5 - 12) -->
+      <div id="scene-telegram" class="scene">
+        <!-- Phone Vector Shell -->
+        <div id="tg-phone" style="width: 700px; background: #0b1120; border-radius: 44px; border: 2px solid rgba(255, 255, 255, 0.12); box-shadow: 0 50px 140px -20px rgba(0, 0, 0, 0.95); overflow: hidden; display: flex; flex-direction: column;">
+          
+          <!-- Telegram App Header -->
+          <div style="background: #0f172a; padding: 22px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; gap: 16px;">
+            <div style="width: 50px; height: 50px; border-radius: 16px; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; font-weight: 900; color: #022c22; font-size: 20px;">
+              F
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 18px; color: #ffffff;">Fiscio Bot</div>
+              <div style="font-size: 13px; color: #34d399; font-weight: 600;">Online • Personal Finance AI</div>
+            </div>
+          </div>
+
+          <!-- Telegram Message Feed -->
+          <div style="padding: 32px 28px; display: flex; flex-direction: column; gap: 22px; min-height: 440px;">
+            
+            <!-- User Text Bubble -->
+            <div id="tg-bubble-user" style="align-self: flex-end; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); padding: 18px 24px; border-radius: 24px 24px 6px 24px; max-width: 80%; transform-origin: bottom right;">
+              <div style="font-size: 18px; font-weight: 600; color: #ffffff;">Makan siang sushi 57rb bca</div>
+              <div style="font-size: 12px; color: #94a3b8; text-align: right; margin-top: 6px;">12:25 • Terkirim ✓✓</div>
+            </div>
+
+            <!-- Bot Confirmation Bubble -->
+            <div id="tg-bubble-bot" style="align-self: flex-start; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); padding: 20px 26px; border-radius: 24px 24px 24px 6px; max-width: 85%; transform-origin: bottom left;">
+              <div style="font-size: 14px; font-weight: 800; color: #34d399; margin-bottom: 6px;">
+                ✅ PENGELUARAN TERCATAT
+              </div>
+              <div style="font-size: 26px; font-weight: 900; color: #ffffff;">
+                -Rp 57.000
+              </div>
+              <div style="font-size: 14px; color: #cbd5e1; margin-top: 6px;">
+                Sushi • Kategori: F&B • Sumber: BCA
+              </div>
+            </div>
+
+            <!-- Receipt OCR Card -->
+            <div id="tg-ocr-card" style="align-self: flex-start; background: #0f172a; border: 1px dashed rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; width: 92%; position: relative; overflow: hidden;">
+              <!-- Laser Scanner Line -->
+              <div id="tg-ocr-laser" style="position: absolute; left: 0; right: 0; height: 3px; background: #10b981; box-shadow: 0 0 20px #10b981; pointer-events: none;"></div>
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">STRUK TERDETEKSI</div>
+                  <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-top: 4px;">MOOKA KOPI GOA RIA</div>
+                  <div style="font-size: 14px; color: #38bdf8; font-weight: 700; margin-top: 4px;">Rp 13.000 • QRIS Berhasil</div>
+                </div>
+                <div id="tg-ocr-badge" style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.5); color: #34d399; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 800;">
+                  100% OCR Akurasi
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Telegram Input Bar -->
+          <div id="tg-input-bar" style="background: #0f172a; padding: 18px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; gap: 14px;">
+            <div style="flex: 1; background: #1e293b; padding: 14px 22px; border-radius: 999px; font-size: 15px; color: #94a3b8;">
+              Ketik pengeluaran atau foto struk…
+            </div>
+            <div id="tg-send-anchor" style="width: 52px; height: 52px; border-radius: 999px;"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SCENE 3: SPENDING HEATMAP & WEB DASHBOARD (6.0s - 10.0s, Beats 13 - 20) -->
+      <div id="scene-dashboard" class="scene">
+        <div id="dash-container" style="width: 1240px; background: #0b1120; border-radius: 36px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 50px 140px -20px rgba(0, 0, 0, 0.95); padding: 42px; display: flex; flex-direction: column; gap: 32px; position: relative;">
+          
+          <!-- Heatmap Card Header -->
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); display: flex; align-items: center; justify-content: center; color: #fb7185;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </div>
+              <div>
+                <h3 style="font-size: 24px; font-weight: 800; color: #ffffff;">Spending Intensity Heatmap</h3>
+                <p style="font-size: 14px; color: #94a3b8;">Pola intensitas pengeluaran harian real-time</p>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; background: #060913; border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 20px; border-radius: 999px; font-size: 12px; color: #94a3b8; font-weight: 600;">
+              <span>Min (0)</span>
+              <div style="width: 12px; height: 12px; border-radius: 3px; background: #1e293b;"></div>
+              <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(225, 29, 72, 0.4);"></div>
+              <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(225, 29, 72, 0.7);"></div>
+              <div style="width: 12px; height: 12px; border-radius: 3px; background: #e11d48;"></div>
+              <span>Max</span>
+            </div>
+          </div>
+
+          <!-- 7-Day Heatmap Pillars -->
+          <div id="heatmap-columns" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 18px;">
+            <div class="hm-col" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 20px; padding: 22px 12px; text-align: center;">
+              <div style="font-size: 14px; font-weight: 700; color: #94a3b8;">MIN</div>
+              <div style="font-size: 20px; font-weight: 800; color: #64748b; margin: 14px 0;">-</div>
+              <div style="font-size: 12px; color: #475569;">0 trx</div>
+            </div>
+            <div class="hm-col" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 20px; padding: 22px 12px; text-align: center;">
+              <div style="font-size: 14px; font-weight: 700; color: #94a3b8;">SEN</div>
+              <div style="font-size: 20px; font-weight: 800; color: #64748b; margin: 14px 0;">-</div>
+              <div style="font-size: 12px; color: #475569;">0 trx</div>
+            </div>
+            <div class="hm-col" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 20px; padding: 22px 12px; text-align: center;">
+              <div style="font-size: 14px; font-weight: 700; color: #94a3b8;">SEL</div>
+              <div style="font-size: 20px; font-weight: 800; color: #64748b; margin: 14px 0;">-</div>
+              <div style="font-size: 12px; color: #475569;">0 trx</div>
+            </div>
+            <div class="hm-col" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 20px; padding: 22px 12px; text-align: center;">
+              <div style="font-size: 14px; font-weight: 700; color: #94a3b8;">RAB</div>
+              <div style="font-size: 20px; font-weight: 800; color: #64748b; margin: 14px 0;">-</div>
+              <div style="font-size: 12px; color: #475569;">0 trx</div>
+            </div>
+            <div class="hm-col" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 20px; padding: 22px 12px; text-align: center;">
+              <div style="font-size: 14px; font-weight: 700; color: #94a3b8;">KAM</div>
+              <div style="font-size: 20px; font-weight: 800; color: #64748b; margin: 14px 0;">-</div>
+              <div style="font-size: 12px; color: #475569;">0 trx</div>
+            </div>
+            
+            <!-- Jum (High Intensity) -->
+            <div class="hm-col" id="col-jum" style="background: rgba(225, 29, 72, 0.35); border: 1px solid rgba(244, 63, 94, 0.6); border-radius: 20px; padding: 22px 12px; text-align: center;">
+              <div style="font-size: 14px; font-weight: 800; color: #fecdd3;">JUM</div>
+              <div style="font-size: 20px; font-weight: 900; color: #ffffff; margin: 14px 0;">197k</div>
+              <div style="font-size: 12px; color: #fda4af; font-weight: 700;">3 trx</div>
+            </div>
+
+            <!-- Sab (Peak Intensity) -->
+            <div class="hm-col" id="col-sab" style="background: rgba(225, 29, 72, 0.85); border: 1px solid #f43f5e; box-shadow: 0 10px 30px rgba(225, 29, 72, 0.45); border-radius: 20px; padding: 22px 12px; text-align: center; position: relative;">
+              <div style="font-size: 14px; font-weight: 900; color: #ffffff;">SAB</div>
+              <div style="font-size: 20px; font-weight: 900; color: #ffffff; margin: 14px 0;">137k</div>
+              <div style="font-size: 12px; color: #ffffff; font-weight: 800;">3 trx</div>
+              
+              <!-- Popover Tooltip -->
+              <div id="hm-tooltip" style="position: absolute; bottom: calc(100% + 16px); left: 50%; transform: translateX(-50%); background: #020617; border: 1px solid #10b981; padding: 10px 20px; border-radius: 14px; font-size: 14px; font-weight: 800; color: #ffffff; white-space: nowrap; box-shadow: 0 15px 35px rgba(0,0,0,0.85);">
+                Sabtu: Rp 137.200 (3 transaksi)
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction Ledger Stream -->
+          <div style="background: #060913; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 22px; padding: 22px 28px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); display: flex; align-items: center; justify-content: center; color: #fb7185; font-size: 18px; font-weight: 800;">
+                ↗
+              </div>
+              <div>
+                <div style="font-size: 17px; font-weight: 800; color: #ffffff;">Sushi</div>
+                <div style="font-size: 13px; color: #64748b;">10 Okt 2026, 13.45 • Telegram • BCA</div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 18px; font-weight: 900; color: #fb7185;">-Rp 57.000</div>
+              <div style="font-size: 12px; color: #34d399; font-weight: 700;">✓ 100% Akurasi</div>
+            </div>
+          </div>
+
+          <!-- Floating Action Button Anchor -->
+          <div id="dash-fab-anchor" style="position: absolute; bottom: 36px; right: 36px; width: 64px; height: 64px; border-radius: 999px;"></div>
+
+        </div>
+      </div>
+
+      <!-- SCENE 4: PAYOFF & LOGO END CARD (10.0s - 15.0s, Beats 21 - 30) -->
+      <div id="scene-end" class="scene">
+        <div id="end-card" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+          
+          <!-- Logo Container -->
+          <div id="logo-wrapper" style="position: relative; width: 180px; height: 180px; margin-bottom: 36px;">
+            <svg id="logo-svg" viewBox="0 0 512 512" width="180" height="180">
+              <defs>
+                <linearGradient id="fiscGradEnd" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#10b981" />
+                  <stop offset="100%" stop-color="#06b6d4" />
+                </linearGradient>
+              </defs>
+              <rect x="24" y="24" width="464" height="464" rx="130" fill="url(#fiscGradEnd)" />
+              <g fill="none" stroke="#090d16" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M168 192 V172 C168 154.3 182.3 140 200 140 H336 C353.7 140 368 154.3 368 172 V192" />
+                <rect x="152" y="192" width="224" height="176" rx="28" />
+                <path d="M324 252 H364 C377.2 252 388 262.8 388 276 C388 289.2 377.2 300 364 300 H324 C315.2 300 308 292.8 308 284 V268 C308 259.2 315.2 252 324 252 Z" fill="#090d16" stroke="none" />
+                <circle id="logo-clasp-dot" cx="352" cy="276" r="7" fill="url(#fiscGradEnd)" stroke="none" />
+              </g>
+            </svg>
+          </div>
+
+          <!-- Brand Title -->
+          <h1 id="end-title" style="font-size: 80px; font-weight: 900; letter-spacing: -0.04em; color: #ffffff; line-height: 1;">
+            Fisc<span style="color: #10b981;">.io</span>
+          </h1>
+
+          <!-- Tagline -->
+          <p id="end-tagline" style="font-size: 34px; font-weight: 800; color: #e2e8f0; margin-top: 18px; letter-spacing: -0.02em;">
+            Keuangan Rapi Tanpa Ribet.
+          </p>
+
+          <!-- Feature Pills -->
+          <div id="end-pills" style="display: flex; gap: 14px; margin-top: 28px;">
+            <span style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; color: #94a3b8;">
+              Telegram Bot NLP
+            </span>
+            <span style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); padding: 8px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; color: #34d399;">
+              OCR Struk Otomatis
+            </span>
+            <span style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; color: #94a3b8;">
+              PWA Real-Time Analytics
+            </span>
+          </div>
+
+          <!-- Call To Action -->
+          <div id="end-cta" style="margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+            <div style="background: linear-gradient(135deg, #10b981, #06b6d4); color: #022c22; font-weight: 900; font-size: 18px; padding: 16px 42px; border-radius: 20px; box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.4);">
+              Mulai Sekarang — Gratis
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: #64748b; letter-spacing: 0.02em;">
+              https://fisc.farlabs.my.id
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Real-time HUD Controller -->
+  <div id="hud">
+    <button id="btn-play">▶ Putar</button>
+    <button id="btn-reset">↺ Reset</button>
+    <input type="range" id="scrubber" min="0" max="15" step="0.01" value="0">
+    <span id="timecode">00.00s</span>
+    <span id="beat-badge">Beat: 1 / 30</span>
+    <button id="btn-audio">🔊 Suara</button>
+  </div>
+
+  <script>
+    // --- Responsive Auto-Scale Viewport to Window ---
+    function resizeViewport() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scale = Math.min((vw - 40) / 1920, (vh - 100) / 1080, 1);
+      const container = document.getElementById('viewport-container');
+      container.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', resizeViewport);
+    resizeViewport();
+
+    // --- Math & Spring Utility Functions ---
+    function clamp(val, min, max) {
+      return Math.max(min, Math.min(max, val));
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    // Damped harmonic spring
+    function spring(t, t0, duration = 0.5, damping = 14, frequency = 20) {
+      if (t < t0) return 0;
+      const dt = t - t0;
+      if (dt >= duration) return 1;
+      const decay = Math.exp(-damping * dt);
+      const val = 1 - decay * Math.cos(frequency * dt) - (damping / frequency) * decay * Math.sin(frequency * dt);
+      return Math.min(1.05, Math.max(0, val));
+    }
+
+    function easeOutExpo(t, t0, duration) {
+      if (t < t0) return 0;
+      const p = Math.min(1, (t - t0) / duration);
+      return p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+    }
+
+    function easeInOutCubic(t, t0, duration) {
+      if (t < t0) return 0;
+      const p = Math.min(1, (t - t0) / duration);
+      return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    }
+
+    // --- Deterministic Frame Computation Function (window.seek) ---
+    // All styles strictly computed from time t (0.0 to 15.0 seconds at 120 BPM)
+    window.seek = function(t) {
+      t = clamp(t, 0, 15.0);
+
+      const stage = document.getElementById('stage');
+      const token = document.getElementById('through-line');
+      const tokenInner = document.getElementById('through-line-inner');
+      const tokenIcon = document.getElementById('through-line-icon');
+      const cursor = document.getElementById('virtual-cursor');
+
+      // Scenes
+      const scHook = document.getElementById('scene-hook');
+      const scTg = document.getElementById('scene-telegram');
+      const scDash = document.getElementById('scene-dashboard');
+      const scEnd = document.getElementById('scene-end');
+
+      // Specific Elements
+      const hookText1 = document.getElementById('hook-text-1');
+      const hookText2 = document.getElementById('hook-text-2');
+      const tgBubbleUser = document.getElementById('tg-bubble-user');
+      const tgBubbleBot = document.getElementById('tg-bubble-bot');
+      const tgOcrCard = document.getElementById('tg-ocr-card');
+      const tgOcrLaser = document.getElementById('tg-ocr-laser');
+      const tgOcrBadge = document.getElementById('tg-ocr-badge');
+      const tgSendAnchor = document.getElementById('tg-send-anchor');
+      const hmTooltip = document.getElementById('hm-tooltip');
+      const dashFabAnchor = document.getElementById('dash-fab-anchor');
+      const logoWrapper = document.getElementById('logo-wrapper');
+      const logoClaspDot = document.getElementById('logo-clasp-dot');
+      const endTitle = document.getElementById('end-title');
+      const endTagline = document.getElementById('end-tagline');
+      const endPills = document.getElementById('end-pills');
+      const endCta = document.getElementById('end-cta');
+
+      // Default Visibility
+      scHook.style.display = t < 2.05 ? 'flex' : 'none';
+      scTg.style.display = (t >= 1.95 && t < 6.05) ? 'flex' : 'none';
+      scDash.style.display = (t >= 5.95 && t < 10.05) ? 'flex' : 'none';
+      scEnd.style.display = t >= 9.95 ? 'flex' : 'none';
+
+      // -------------------------------------------------------------
+      // SCENE 1: THE HOOK (0.0s - 2.0s, Beats 1 - 4)
+      // Camera pushes from 1.0 to 1.04
+      // -------------------------------------------------------------
+      if (t < 2.0) {
+        const cam = lerp(1.0, 1.04, t / 2.0);
+        stage.style.transform = `scale(${cam})`;
+
+        const s1 = spring(t, 0.0, 0.4);
+        hookText1.style.opacity = clamp(s1 * 1.5, 0, 1);
+        hookText1.style.transform = `translateY(${lerp(30, 0, s1)}px) scale(${lerp(0.95, 1.0, s1)})`;
+
+        const s2 = spring(t, 0.5, 0.4);
+        hookText2.style.opacity = clamp(s2 * 1.5, 0, 1);
+        hookText2.style.transform = `translateY(${lerp(30, 0, s2)}px)`;
+
+        // Through-line Token emerges at center on beat 3 (1.0s)
+        const sToken = spring(t, 1.0, 0.45);
+        const tokenSize = lerp(0, 48, sToken);
+        token.style.width = `${tokenSize}px`;
+        token.style.height = `${tokenSize}px`;
+        token.style.left = `960px`;
+        token.style.top = `680px`;
+        token.style.transform = `translate(-50%, -50%) scale(${lerp(0.5, 1.0, sToken)})`;
+        token.style.opacity = clamp(sToken * 2, 0, 1);
+        tokenInner.style.borderRadius = `9999px`;
+        tokenIcon.style.opacity = '1';
+        cursor.style.opacity = '0';
+      }
+
+      // -------------------------------------------------------------
+      // SCENE 2: TELEGRAM BOT INGESTION & OCR (2.0s - 6.0s, Beats 5 - 12)
+      // Camera pushes from 1.04 to 1.08
+      // -------------------------------------------------------------
+      else if (t < 6.0) {
+        const pScene = (t - 2.0) / 4.0;
+        const cam = lerp(1.04, 1.08, pScene);
+        stage.style.transform = `scale(${cam})`;
+
+        // Target anchor for Send Button
+        const anchorRect = tgSendAnchor.getBoundingClientRect();
+        const stageRect = stage.getBoundingClientRect();
+        // Fallback relative position in stage
+        const sendX = 960 + 230;
+        const sendY = 540 + 205;
+
+        // Token transforms into Send Button
+        token.style.width = `44px`;
+        token.style.height = `44px`;
+        token.style.left = `${sendX}px`;
+        token.style.top = `${sendY}px`;
+        token.style.transform = `translate(-50%, -50%)`;
+        token.style.opacity = '1';
+
+        // Virtual Cursor interaction
+        cursor.style.opacity = '1';
+        if (t < 2.5) {
+          // Cursor moves toward send button
+          const pMove = easeInOutCubic(t, 2.0, 0.5);
+          cursor.style.left = `${lerp(960, sendX, pMove)}px`;
+          cursor.style.top = `${lerp(540, sendY, pMove)}px`;
+          cursor.style.transform = `scale(1)`;
+        } else if (t < 2.8) {
+          // Cursor clicks button
+          cursor.style.left = `${sendX}px`;
+          cursor.style.top = `${sendY}px`;
+          const pClick = spring(t, 2.5, 0.3);
+          cursor.style.transform = `scale(${lerp(0.85, 1.0, pClick)})`;
+          token.style.transform = `translate(-50%, -50%) scale(${lerp(0.9, 1.0, pClick)})`;
+        } else {
+          // Cursor retreats
+          const pRetreat = easeOutExpo(t, 2.8, 0.6);
+          cursor.style.left = `${lerp(sendX, sendX + 120, pRetreat)}px`;
+          cursor.style.top = `${lerp(sendY, sendY + 120, pRetreat)}px`;
+          cursor.style.opacity = `${lerp(1, 0, pRetreat)}`;
+        }
+
+        // User Chat Bubble appears
+        const sUserBubble = spring(t, 2.0, 0.4);
+        tgBubbleUser.style.opacity = clamp(sUserBubble * 1.5, 0, 1);
+        tgBubbleUser.style.transform = `scale(${sUserBubble})`;
+
+        // Bot Response Bubble pops at beat 7 (3.0s)
+        const sBotBubble = spring(t, 3.0, 0.45);
+        tgBubbleBot.style.opacity = clamp(sBotBubble * 1.5, 0, 1);
+        tgBubbleBot.style.transform = `scale(${sBotBubble})`;
+
+        // OCR Card drops at beat 8 (3.5s)
+        const sOcrCard = spring(t, 3.5, 0.45);
+        tgOcrCard.style.opacity = clamp(sOcrCard * 1.5, 0, 1);
+        tgOcrCard.style.transform = `translateY(${lerp(30, 0, sOcrCard)}px)`;
+
+        // Laser scan sweeps across receipt between 4.0s and 4.6s
+        if (t >= 4.0 && t <= 4.8) {
+          const pScan = (t - 4.0) / 0.8;
+          tgOcrLaser.style.opacity = '1';
+          tgOcrLaser.style.top = `${lerp(0, 70, pScan)}px`;
+        } else {
+          tgOcrLaser.style.opacity = '0';
+        }
+
+        // 100% OCR Badge pops at 4.5s
+        const sBadge = spring(t, 4.5, 0.4);
+        tgOcrBadge.style.opacity = clamp(sBadge * 1.5, 0, 1);
+        tgOcrBadge.style.transform = `scale(${sBadge})`;
+
+        // At 5.5s, Token breaks free and guides camera to dashboard
+        if (t >= 5.5) {
+          const pTrans = easeInOutCubic(t, 5.5, 0.5);
+          token.style.left = `${lerp(sendX, 960 + 380, pTrans)}px`;
+          token.style.top = `${lerp(sendY, 540 - 20, pTrans)}px`;
+        }
+      }
+
+      // -------------------------------------------------------------
+      // SCENE 3: SPENDING HEATMAP & DASHBOARD (6.0s - 10.0s, Beats 13 - 20)
+      // Camera pushes from 1.08 to 1.12
+      // -------------------------------------------------------------
+      else if (t < 10.0) {
+        const pScene = (t - 6.0) / 4.0;
+        const cam = lerp(1.08, 1.12, pScene);
+        stage.style.transform = `scale(${cam})`;
+
+        // Dashboard container unfolds at 6.0s
+        const sDash = spring(t, 6.0, 0.5);
+        scDash.style.opacity = clamp(sDash * 1.5, 0, 1);
+
+        // Saturday Peak Card coordinates
+        const sabX = 960 + 380;
+        const sabY = 540 - 20;
+
+        // Tooltip reveals on hover at beat 16 (7.5s)
+        const sTooltip = spring(t, 7.5, 0.4);
+        hmTooltip.style.opacity = clamp(sTooltip * 1.5, 0, 1);
+        hmTooltip.style.transform = `translateX(-50%) translateY(${lerp(15, 0, sTooltip)}px) scale(${sTooltip})`;
+
+        // Cursor hovers on Saturday
+        cursor.style.opacity = '1';
+        if (t < 8.0) {
+          const pHover = easeInOutCubic(t, 7.0, 0.5);
+          cursor.style.left = `${lerp(sabX - 100, sabX, pHover)}px`;
+          cursor.style.top = `${lerp(sabY + 50, sabY, pHover)}px`;
+        } else {
+          cursor.style.opacity = `${lerp(1, 0, (t - 8.0) / 0.5)}`;
+        }
+
+        // Target FAB location: bottom right of dashboard
+        const fabX = 960 + 440;
+        const fabY = 540 + 215;
+
+        // Token transforms into Floating Action Button (+) at 8.8s
+        if (t < 8.8) {
+          token.style.width = `24px`;
+          token.style.height = `24px`;
+          token.style.left = `${sabX}px`;
+          token.style.top = `${sabY - 30}px`;
+          token.style.opacity = '0.9';
+          tokenIcon.style.opacity = '0';
+        } else {
+          const sFab = spring(t, 8.8, 0.45);
+          token.style.width = `56px`;
+          token.style.height = `56px`;
+          token.style.left = `${fabX}px`;
+          token.style.top = `${fabY}px`;
+          token.style.transform = `translate(-50%, -50%) scale(${sFab})`;
+          token.style.opacity = '1';
+          tokenIcon.style.opacity = '1';
+          // Replace icon with + symbol
+          tokenIcon.innerHTML = `<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>`;
+        }
+
+        // At 9.6s, Token leaps toward the center for the Payoff
+        if (t >= 9.6) {
+          const pLeap = easeInOutCubic(t, 9.6, 0.4);
+          token.style.left = `${lerp(fabX, 960, pLeap)}px`;
+          token.style.top = `${lerp(fabY, 540 - 150, pLeap)}px`;
+          token.style.transform = `translate(-50%, -50%) scale(${lerp(1.0, 2.2, pLeap)})`;
+        }
+      }
+
+      // -------------------------------------------------------------
+      // SCENE 4: PAYOFF & LOGO END CARD (10.0s - 15.0s, Beats 21 - 30)
+      // Camera pushes from 1.12 to 1.15
+      // -------------------------------------------------------------
+      else {
+        const pScene = (t - 10.0) / 5.0;
+        const cam = lerp(1.12, 1.15, pScene);
+        stage.style.transform = `scale(${cam})`;
+        cursor.style.opacity = '0';
+
+        // Logo scale in on biggest beat 21 (10.0s)
+        const sLogo = spring(t, 10.0, 0.55);
+        logoWrapper.style.transform = `scale(${sLogo})`;
+        logoWrapper.style.opacity = clamp(sLogo * 1.5, 0, 1);
+
+        // Clasp dot target position in logo SVG:
+        // Logo center is at 960, 540 - 150
+        // In SVG 512x512, clasp pin dot is at (352, 276)
+        // Scaled to 180x180: offset is (352 - 256) * (180/512) = +33.75px X, (276 - 256) * (180/512) = +7.03px Y
+        const claspTargetX = 960 + 34;
+        const claspTargetY = 540 - 150 + 7;
+
+        // Token snaps directly into clasp pin dot at 10.8s
+        if (t < 11.0) {
+          const pSnap = easeInOutCubic(t, 10.0, 0.8);
+          token.style.width = `${lerp(120, 14, pSnap)}px`;
+          token.style.height = `${lerp(120, 14, pSnap)}px`;
+          token.style.left = `${lerp(960, claspTargetX, pSnap)}px`;
+          token.style.top = `${lerp(540 - 150, claspTargetY, pSnap)}px`;
+          token.style.opacity = '1';
+          tokenIcon.style.opacity = '0';
+        } else {
+          // Token becomes the clasp dot permanently
+          token.style.width = '14px';
+          token.style.height = '14px';
+          token.style.left = `${claspTargetX}px`;
+          token.style.top = `${claspTargetY}px`;
+          token.style.opacity = '1';
+          tokenIcon.style.opacity = '0';
+          // Visual pulse on clasp lock
+          const sLock = spring(t, 11.0, 0.35);
+          token.style.transform = `translate(-50%, -50%) scale(${lerp(1.6, 1.0, sLock)})`;
+        }
+
+        // Title reveals at beat 24 (11.5s)
+        const sTitle = spring(t, 11.5, 0.45);
+        endTitle.style.opacity = clamp(sTitle * 1.5, 0, 1);
+        endTitle.style.transform = `translateY(${lerp(30, 0, sTitle)}px)`;
+
+        // Tagline reveals at beat 25 (12.0s)
+        const sTagline = spring(t, 12.0, 0.45);
+        endTagline.style.opacity = clamp(sTagline * 1.5, 0, 1);
+        endTagline.style.transform = `translateY(${lerp(25, 0, sTagline)}px)`;
+
+        // Feature pills unfold at beat 26 (12.5s)
+        const sPills = spring(t, 12.5, 0.45);
+        endPills.style.opacity = clamp(sPills * 1.5, 0, 1);
+        endPills.style.transform = `translateY(${lerp(20, 0, sPills)}px)`;
+
+        // CTA reveals at beat 27 (13.0s)
+        const sCta = spring(t, 13.0, 0.45);
+        endCta.style.opacity = clamp(sCta * 1.5, 0, 1);
+        endCta.style.transform = `translateY(${lerp(20, 0, sCta)}px)`;
+      }
+
+      // Update HUD elements
+      document.getElementById('scrubber').value = t;
+      document.getElementById('timecode').innerText = `${t.toFixed(2)}s`;
+      const currentBeat = Math.min(30, Math.floor(t / 0.5) + 1);
+      document.getElementById('beat-badge').innerText = `Beat: ${currentBeat} / 30`;
+    };
+
+    // --- Web Audio API Procedural Soundtrack (120 BPM) ---
+    let audioCtx = null;
+    let isAudioPlaying = false;
+    let scheduledBeats = new Set();
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playKick(time, isHeavy) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(isHeavy ? 150 : 115, time);
+      osc.frequency.exponentialRampToValueAtTime(32, time + 0.18);
+      gain.gain.setValueAtTime(isHeavy ? 0.9 : 0.6, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+    }
+
+    function playImpact(time) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(440, time);
+      osc.frequency.exponentialRampToValueAtTime(55, time + 0.6);
+      gain.gain.setValueAtTime(0.7, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.7);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+    }
+
+    function playClaspClick(time) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(2200, time);
+      osc.frequency.exponentialRampToValueAtTime(400, time + 0.05);
+      gain.gain.setValueAtTime(0.8, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+    }
+
+    // --- Animation Timeline Runner ---
+    let isPlaying = false;
+    let startTime = 0;
+    let currentTime = 0;
+    let animFrame = null;
+
+    function tick() {
+      if (!isPlaying) return;
+      const now = performance.now();
+      const delta = (now - startTime) / 1000;
+      currentTime = delta;
+
+      if (currentTime >= 15.0) {
+        currentTime = 15.0;
+        window.seek(15.0);
+        pausePlayback();
+        return;
+      }
+
+      window.seek(currentTime);
+
+      // Trigger audio on beats
+      if (audioCtx && isAudioPlaying) {
+        const beatIndex = Math.floor(currentTime / 0.5);
+        if (!scheduledBeats.has(beatIndex)) {
+          scheduledBeats.add(beatIndex);
+          const nowAudio = audioCtx.currentTime;
+          playKick(nowAudio, beatIndex % 4 === 0 || beatIndex === 20);
+
+          if (beatIndex === 0 || beatIndex === 4 || beatIndex === 12 || beatIndex === 20) {
+            playImpact(nowAudio);
+          }
+          if (beatIndex === 22) { // 11.0s clasp click
+            playClaspClick(nowAudio);
+          }
+        }
+      }
+
+      animFrame = requestAnimationFrame(tick);
+    }
+
+    function startPlayback() {
+      initAudio();
+      isAudioPlaying = true;
+      isPlaying = true;
+      startTime = performance.now() - currentTime * 1000;
+      document.getElementById('btn-play').innerText = '❚❚ Jeda';
+      animFrame = requestAnimationFrame(tick);
+    }
+
+    function pausePlayback() {
+      isPlaying = false;
+      document.getElementById('btn-play').innerText = '▶ Putar';
+      if (animFrame) cancelAnimationFrame(animFrame);
+    }
+
+    function resetPlayback() {
+      pausePlayback();
+      currentTime = 0;
+      scheduledBeats.clear();
+      window.seek(0);
+    }
+
+    // --- UI Controls Event Listeners ---
+    document.getElementById('btn-play').addEventListener('click', () => {
+      if (isPlaying) {
+        pausePlayback();
+      } else {
+        if (currentTime >= 15.0) currentTime = 0;
+        startPlayback();
+      }
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', resetPlayback);
+
+    document.getElementById('scrubber').addEventListener('input', (e) => {
+      currentTime = parseFloat(e.target.value);
+      window.seek(currentTime);
+    });
+
+    document.getElementById('btn-audio').addEventListener('click', () => {
+      initAudio();
+      isAudioPlaying = !isAudioPlaying;
+      document.getElementById('btn-audio').innerText = isAudioPlaying ? '🔊 Suara Aktif' : '🔇 Mute';
+    });
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        document.getElementById('btn-play').click();
+      } else if (e.code === 'ArrowRight') {
+        currentTime = Math.min(15.0, currentTime + 0.5); // step 1 beat
+        window.seek(currentTime);
+      } else if (e.code === 'ArrowLeft') {
+        currentTime = Math.max(0, currentTime - 0.5); // step 1 beat back
+        window.seek(currentTime);
+      } else if (e.code === 'KeyR') {
+        resetPlayback();
+      }
+    });
+
+    // Initialize at frame 0
+    window.seek(0);
+  </script>
+</body>
+</html>
