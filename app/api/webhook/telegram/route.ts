@@ -62,10 +62,10 @@ export async function POST(request: Request) {
     await answerTelegramCallback(cbId);
 
     try {
-      // Syntax: acc:<accountId>:<txId>
-      if (data.startsWith('acc:')) {
+      // Syntax: a:<accountIndex>:<txId> or acc:<accountId>:<txId>
+      if (data.startsWith('a:') || data.startsWith('acc:')) {
         const parts = data.split(':');
-        const accountId = parts[1];
+        const accParam = parts[1];
         const txId = parts[2];
 
         // Fetch transaction and account
@@ -75,18 +75,29 @@ export async function POST(request: Request) {
           .eq('id', txId)
           .single();
 
-        const { data: account } = await supabaseAdmin
+        if (!tx) {
+          return NextResponse.json({ ok: true });
+        }
+
+        const { data: accounts } = await supabaseAdmin
           .from('accounts')
           .select('*')
-          .eq('id', accountId)
-          .single();
+          .eq('user_id', tx.user_id)
+          .order('created_at', { ascending: true });
+
+        const isIndex = /^\d+$/.test(accParam);
+        const account = accounts
+          ? isIndex
+            ? accounts[parseInt(accParam, 10)]
+            : accounts.find((a) => a.id === accParam)
+          : null;
 
         if (tx && account) {
           // Link transaction to selected account and mark confidence to 100%
           await supabaseAdmin
             .from('transactions')
             .update({
-              account_id: accountId,
+              account_id: account.id,
               confidence_score: 1.0,
             })
             .eq('id', txId);
@@ -97,7 +108,7 @@ export async function POST(request: Request) {
             .update({
               balance: Number(account.balance) - Number(tx.amount),
             })
-            .eq('id', accountId);
+            .eq('id', account.id);
 
           const formattedAmount = new Intl.NumberFormat('id-ID', {
             style: 'currency',
@@ -115,8 +126,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true });
       }
 
-      // Syntax: cancel:<txId>
-      if (data.startsWith('cancel:')) {
+      // Syntax: c:<txId> or cancel:<txId>
+      if (data.startsWith('c:') || data.startsWith('cancel:')) {
         const parts = data.split(':');
         const txId = parts[1];
 
@@ -316,13 +327,13 @@ export async function POST(request: Request) {
               const row = [
                 {
                   text: `💳 ${userAccounts[i].name}`,
-                  callback_data: `acc:${userAccounts[i].id}:${insertedTx.id}`,
+                  callback_data: `a:${i}:${insertedTx.id}`,
                 },
               ];
               if (userAccounts[i + 1]) {
                 row.push({
                   text: `💳 ${userAccounts[i + 1].name}`,
-                  callback_data: `acc:${userAccounts[i + 1].id}:${insertedTx.id}`,
+                  callback_data: `a:${i + 1}:${insertedTx.id}`,
                 });
               }
               inlineButtons.push(row);
@@ -330,7 +341,7 @@ export async function POST(request: Request) {
           }
 
           inlineButtons.push([
-            { text: '❌ Batalkan / Hapus', callback_data: `cancel:${insertedTx.id}` },
+            { text: '❌ Batalkan / Hapus', callback_data: `c:${insertedTx.id}` },
           ]);
 
           await sendTelegramMessage(
