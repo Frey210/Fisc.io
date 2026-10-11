@@ -62,6 +62,7 @@ export default function DashboardClient() {
       .select('*')
       .eq('user_id', userId)
       .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(100);
 
     setTransactions((txData as Transaction[]) || []);

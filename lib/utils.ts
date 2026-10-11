@@ -13,6 +13,22 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export function formatCompactCurrency(amount: number): string {
+  if (amount >= 1_000_000_000) {
+    return `${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  if (amount >= 1_000_000) {
+    return `${(amount / 1_000_000).toFixed(1).replace(/\.0$/, '')}jt`;
+  }
+  if (amount >= 100_000) {
+    return `${Math.round(amount / 1_000)}k`;
+  }
+  if (amount >= 1_000) {
+    return `${(amount / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+  return String(amount);
+}
+
 export function formatDate(dateString: string): string {
   return new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',

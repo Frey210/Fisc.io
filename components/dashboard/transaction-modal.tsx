@@ -12,6 +12,18 @@ interface TransactionModalProps {
   transactionToEdit?: Transaction | null;
 }
 
+function toLocalDatetimeInput(dateInput?: string | Date | null): string {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export function TransactionModal({
   isOpen,
   onClose,
@@ -25,7 +37,7 @@ export function TransactionModal({
   const [toAccountId, setToAccountId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>(() => toLocalDatetimeInput());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,18 +49,14 @@ export function TransactionModal({
       setToAccountId(transactionToEdit.to_account_id || '');
       setAmount(transactionToEdit.amount ? String(transactionToEdit.amount) : '');
       setDescription(transactionToEdit.description || '');
-      setDate(
-        transactionToEdit.date
-          ? new Date(transactionToEdit.date).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0]
-      );
+      setDate(toLocalDatetimeInput(transactionToEdit.date));
     } else {
       setType('EXPENSE');
       setAccountId('');
       setToAccountId('');
       setAmount('');
       setDescription('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(toLocalDatetimeInput());
     }
     setError(null);
   }, [transactionToEdit, isOpen]);
@@ -73,6 +81,8 @@ export function TransactionModal({
     setLoading(true);
 
     try {
+      const resolvedDate = date ? new Date(date).toISOString() : new Date().toISOString();
+
       if (transactionToEdit) {
         // Update existing transaction & mark verified (confidence 1.0)
         const { error: updateError } = await supabase
@@ -83,7 +93,7 @@ export function TransactionModal({
             description: description.trim() || null,
             account_id: accountId || null,
             to_account_id: type === 'TRANSFER' ? toAccountId || null : null,
-            date: new Date(date).toISOString(),
+            date: resolvedDate,
             confidence_score: 1.0,
           })
           .eq('id', transactionToEdit.id)
@@ -127,7 +137,7 @@ export function TransactionModal({
           description: description.trim() || null,
           account_id: accountId || null,
           to_account_id: type === 'TRANSFER' ? toAccountId || null : null,
-          date: new Date(date).toISOString(),
+          date: resolvedDate,
           source: 'web_manual',
           confidence_score: 1.0,
         });
@@ -328,13 +338,13 @@ export function TransactionModal({
             />
           </div>
 
-          {/* Date */}
+          {/* Date & Time */}
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-              Tanggal
+              Tanggal & Waktu
             </label>
             <input
-              type="date"
+              type="datetime-local"
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}

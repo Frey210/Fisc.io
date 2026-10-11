@@ -1,7 +1,7 @@
 'use client';
 
 import { Transaction } from '@/types/database';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCompactCurrency } from '@/lib/utils';
 import { Calendar } from 'lucide-react';
 
 interface SpendingHeatmapProps {
@@ -35,8 +35,8 @@ export function SpendingHeatmap({ transactions }: SpendingHeatmapProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/80 p-5 shadow-xl backdrop-blur-xl">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="rounded-2xl border border-white/5 bg-slate-900/80 p-3.5 sm:p-5 shadow-xl backdrop-blur-xl">
+      <div className="mb-4 sm:mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400">
             <Calendar className="h-4 w-4" />
@@ -48,37 +48,45 @@ export function SpendingHeatmap({ transactions }: SpendingHeatmapProps) {
         </div>
 
         {/* Visual Color Legend */}
-        <div className="flex items-center gap-2 self-start sm:self-auto rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-1.5 text-[10px] text-slate-400">
+        <div className="flex items-center gap-2 self-start sm:self-auto rounded-xl border border-slate-800 bg-slate-950/80 px-2.5 py-1 text-[10px] text-slate-400">
           <span>Min (0)</span>
           <div className="flex items-center gap-1">
-            <div className="h-3 w-3 rounded bg-slate-900 border border-slate-800" title="0" />
-            <div className="h-3 w-3 rounded bg-rose-950/50 border border-rose-900/40" title="Low" />
-            <div className="h-3 w-3 rounded bg-rose-900/60 border border-rose-800/50" title="Medium" />
-            <div className="h-3 w-3 rounded bg-rose-800/80 border border-rose-700/60" title="High" />
-            <div className="h-3 w-3 rounded bg-rose-600 border border-rose-500" title="Peak" />
+            <div className="h-2.5 w-2.5 rounded bg-slate-900 border border-slate-800" title="0" />
+            <div className="h-2.5 w-2.5 rounded bg-rose-950/50 border border-rose-900/40" title="Low" />
+            <div className="h-2.5 w-2.5 rounded bg-rose-900/60 border border-rose-800/50" title="Medium" />
+            <div className="h-2.5 w-2.5 rounded bg-rose-800/80 border border-rose-700/60" title="High" />
+            <div className="h-2.5 w-2.5 rounded bg-rose-600 border border-rose-500" title="Peak" />
           </div>
           <span>Max</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2.5">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2.5">
         {DAYS.map((dayName, idx) => {
           const total = dayTotals[idx];
           const count = dayCounts[idx];
           return (
             <div
               key={dayName}
-              className={`flex flex-col items-center justify-between rounded-xl border p-3 text-center transition hover:scale-105 ${getIntensityClass(
+              title={`${dayName}: ${total > 0 ? formatCurrency(total) : 'Rp 0'} (${count} transaksi)`}
+              className={`flex flex-col items-center justify-between min-w-0 overflow-hidden w-full rounded-xl border p-1 sm:p-2.5 text-center transition hover:scale-105 ${getIntensityClass(
                 total
               )}`}
             >
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400 truncate w-full">
                 {dayName}
               </span>
-              <div className="my-2 text-xs">
-                {total > 0 ? formatCurrency(total) : '-'}
+              <div className="my-1 sm:my-1.5 w-full truncate text-[10px] sm:text-xs font-bold leading-tight">
+                {total > 0 ? (
+                  <>
+                    <span className="sm:hidden">{formatCompactCurrency(total)}</span>
+                    <span className="hidden sm:inline">{formatCurrency(total)}</span>
+                  </>
+                ) : (
+                  <span className="text-slate-500 font-normal">-</span>
+                )}
               </div>
-              <span className="text-[10px] text-slate-500">
+              <span className="text-[9px] sm:text-[10px] text-slate-500 truncate w-full">
                 {count > 0 ? `${count} trx` : '0'}
               </span>
             </div>
