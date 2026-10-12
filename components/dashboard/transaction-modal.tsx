@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Transaction, TransactionType, Account } from '@/types/database';
 import { Plus, X, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { formatNumberWithDots } from '@/lib/utils';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -309,9 +310,16 @@ export function TransactionModal({
 
           {/* Amount */}
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-              Nominal (IDR)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-400">
+                Nominal (IDR)
+              </label>
+              {amount && !isNaN(Number(amount)) && Number(amount) > 0 && (
+                <span className="text-xs font-bold text-emerald-400 font-mono animate-fadeIn">
+                  Rp {formatNumberWithDots(amount)}
+                </span>
+              )}
+            </div>
             <input
               type="number"
               required

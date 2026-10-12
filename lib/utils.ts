@@ -13,6 +13,13 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export function formatNumberWithDots(val: string | number): string {
+  if (!val && val !== 0) return '';
+  const clean = String(val).replace(/\D/g, '');
+  if (!clean) return '';
+  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 export function formatCompactCurrency(amount: number): string {
   if (amount >= 1_000_000_000) {
     return `${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}M`;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Account, AccountType } from '@/types/database';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
 import {
   Landmark,
   Smartphone,
@@ -220,9 +220,16 @@ export function AccountsOverview({ accounts, userId, onAccountsUpdated }: Accoun
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
-                  Saldo Awal (IDR)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400">
+                    Saldo Awal (IDR)
+                  </label>
+                  {balance && !isNaN(Number(balance)) && Number(balance) > 0 && (
+                    <span className="text-[11px] font-bold text-emerald-400 font-mono">
+                      Rp {formatNumberWithDots(balance)}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="number"
                   min="0"
