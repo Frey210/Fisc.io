@@ -1,4 +1,6 @@
 import { createWorker } from 'tesseract.js';
+import sharp from 'sharp';
+
 // Ensure Next.js file tracer includes these worker dependencies in serverless output
 // @ts-ignore
 import 'bmp-js';
@@ -15,6 +17,25 @@ export interface ReceiptOCRResult {
   merchantName: string | null;
   categoryHint: string | null;
   confidence: number;
+}
+
+/**
+ * Preprocesses receipt image to dramatically boost OCR contrast and character definition
+ */
+async function preprocessImage(buffer: Buffer): Promise<Buffer> {
+  try {
+    const meta = await sharp(buffer).metadata();
+    const targetWidth = Math.max(1200, (meta.width || 800) * 2);
+
+    return await sharp(buffer)
+      .resize({ width: targetWidth, withoutEnlargement: false })
+      .grayscale()
+      .linear(1.35, -15) // boost contrast to separate thermal paper font from background
+      .toBuffer();
+  } catch (err) {
+    console.warn('[OCR Preprocessing Warning]: Falling back to raw buffer', err);
+    return buffer;
+  }
 }
 
 /**
@@ -36,6 +57,9 @@ export async function parseReceiptImage(imageSource: string | Buffer): Promise<R
     imageBuffer = Buffer.from(imageSource as any);
   }
 
+  // Preprocess image with Sharp for crisp thermal receipt text
+  const cleanImageBuffer = await preprocessImage(imageBuffer);
+
   // 2. Initialize Tesseract Worker
   const worker = await createWorker('ind+eng');
 
@@ -43,13 +67,13 @@ export async function parseReceiptImage(imageSource: string | Buffer): Promise<R
     // 3. Recognize with 35s safety timeout to prevent lambda freeze
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
-        () => reject(new Error('Waktu pemrosesan OCR melebihi batas (35s). Mohon crop/potong gambar struk lebih fokus.')),
+        () => reject(new Error('Waktu pemrosesan OCR melebihi batas (35s). Mohon potong gambar struk lebih dekat.')),
         35000
       )
     );
 
     const { data } = await Promise.race([
-      worker.recognize(imageBuffer),
+      worker.recognize(cleanImageBuffer),
       timeoutPromise,
     ]);
 
@@ -75,7 +99,7 @@ export async function parseReceiptImage(imageSource: string | Buffer): Promise<R
       }
     }
 
-    // Pattern B: Physical receipt header lines (Indomaret, Alfamart, Cafes)
+    // Pattern B: Physical receipt header lines (Alfamidi, Indomaret, Alfamart, Cafes)
     if (!merchantName) {
       const ignoredPatterns = /tanggal|date|struk|nota|receipt|kasir|cashier|no\.|trx|ref|id|pembayaran|berhasil|sukses|qris|transfer|transaksi|jam|wib|wita|wit/i;
       for (let i = 0; i < Math.min(lines.length, 6); i++) {
@@ -92,14 +116,22 @@ export async function parseReceiptImage(imageSource: string | Buffer): Promise<R
     // 5. Extract Total Amount
     let totalAmount: number | null = null;
 
-    // Pattern A: Labeled total keywords (TOTAL, TAGIHAN, JUMLAH, GRAND TOTAL, TOTAL BAYAR, NOMINAL)
-    const labeledRegex = /(?:total|grand\s*total|tagihan|jumlah|netto|total\s*bayar|nominal(?:\s*transaksi)?)\s*[:=]?\s*(?:rp\.?)?\s*([\d]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/i;
-    const labeledMatch = rawText.match(labeledRegex);
-    if (labeledMatch && labeledMatch[1]) {
-      const sanitized = labeledMatch[1].replace(/[.,](\d{2})$/, '.$1').replace(/[.,](?!\d{2}$)/g, '');
+    // Pattern A: Labeled total keywords (TOTAL, TOTAL BELANJA, TOTAL BAYAR, GRAND TOTAL, TAGIHAN, JUMLAH, QRIS ...)
+    const labeledRegex = /(?:total(?:\s*(?:belanja|bayar|transaksi|item|tagihan))?|grand\s*total|tagihan|jumlah(?:\s*bayar)?|netto|nominal(?:\s*transaksi)?|qris(?:\s*cpm)?(?:\s*[a-z]+)?|tunai|cash|debit|kartu)\s*[:=]?\s*(?:rp\.?)?\s*([\d]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?|[\d]{4,9})/gi;
+    const labeledMatches = [...rawText.matchAll(labeledRegex)];
+
+    for (const m of labeledMatches) {
+      const fullMatch = m[0].toLowerCase();
+      // Skip if it matched line items count or discount amount
+      if (fullMatch.includes('item') || fullMatch.includes('disc') || fullMatch.includes('diskon')) {
+        continue;
+      }
+      const rawVal = m[1];
+      const sanitized = rawVal.replace(/[.,](\d{2})$/, '.$1').replace(/[.,](?!\d{2}$)/g, '');
       const parsed = parseFloat(sanitized);
-      if (!isNaN(parsed) && parsed > 0) {
+      if (!isNaN(parsed) && parsed >= 500 && parsed <= 500000000) {
         totalAmount = parsed;
+        break;
       }
     }
 
@@ -110,7 +142,6 @@ export async function parseReceiptImage(imageSource: string | Buffer): Promise<R
       for (const m of rpMatches) {
         const clean = m[1].replace(/[.,](\d{2})$/, '.$1').replace(/[.,](?!\d{2}$)/g, '');
         const val = parseFloat(clean);
-        // Valid transaction range between Rp 1.000 and Rp 500.000.000
         if (!isNaN(val) && val >= 1000 && val <= 500000000) {
           totalAmount = val;
           break;
@@ -136,7 +167,7 @@ export async function parseReceiptImage(imageSource: string | Buffer): Promise<R
     const combinedText = `${merchantName || ''} ${rawText}`.toLowerCase();
     if (/kopi|cafe|coffee|resto|warung|makan|food|kitchen|bakso|mie|ayam|roti|cake|burger|pizza|tea|teh|kuliner/i.test(combinedText)) {
       categoryHint = 'F&B';
-    } else if (/indomaret|alfamart|supermarket|minimarket|mart|hypermart|sayur|buah|sembako/i.test(combinedText)) {
+    } else if (/alfamidi|alfamart|indomaret|supermarket|minimarket|mart|hypermart|sayur|buah|sembako/i.test(combinedText)) {
       categoryHint = 'Groceries';
     } else if (/spbu|pertamina|shell|gojek|grab|maxim|parkir|toll|tol|ojek|transport/i.test(combinedText)) {
       categoryHint = 'Transport';

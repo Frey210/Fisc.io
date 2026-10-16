@@ -102,11 +102,12 @@ export async function POST(request: Request) {
             })
             .eq('id', txId);
 
-          // Deduct from account balance
+          // Update account balance according to transaction type
+          const delta = tx.type === 'INCOME' ? Number(tx.amount) : -Number(tx.amount);
           await supabaseAdmin
             .from('accounts')
             .update({
-              balance: Number(account.balance) - Number(tx.amount),
+              balance: Number(account.balance) + delta,
             })
             .eq('id', account.id);
 
@@ -116,10 +117,13 @@ export async function POST(request: Request) {
             maximumFractionDigits: 0,
           }).format(tx.amount);
 
+          const typeBadge = tx.type === 'INCOME' ? '🟢 <b>PEMASUKAN</b>' : '🔴 <b>PENGELUARAN</b>';
+          const verb = tx.type === 'INCOME' ? 'Saldo Ditambahkan' : 'Saldo Dipotong';
+
           await editTelegramMessage(
             cbChatId,
             messageId,
-            `✅ <b>Struk Terkonfirmasi & Disimpan!</b>\n\n🔴 <b>PENGELUARAN</b>\n💰 <b>Total:</b> ${formattedAmount}\n🏪 <b>Merchant:</b> ${tx.description}\n💳 <b>Sumber Dana:</b> ${account.name} (Saldo Dipotong)\n🎯 <b>Status:</b> Terverifikasi 100%`,
+            `✅ <b>Transaksi Terkonfirmasi & Disimpan!</b>\n\n${typeBadge}\n💰 <b>Total:</b> ${formattedAmount}\n📝 <b>Keterangan:</b> ${tx.description}\n💳 <b>Sumber Dana:</b> ${account.name} (${verb})\n🎯 <b>Status:</b> Terverifikasi 100%`,
             'HTML'
           );
         }
@@ -431,25 +435,29 @@ export async function POST(request: Request) {
       }
 
       // 4c. Insert Transaction
-      const { error: insertErr } = await supabaseAdmin.from('transactions').insert({
-        user_id: userId,
-        type: parsed.type,
-        amount: parsed.amount,
-        description: parsed.description,
-        category_id: categoryId,
-        account_id: sourceAccount ? sourceAccount.id : null,
-        to_account_id: targetAccount ? targetAccount.id : null,
-        source: 'telegram_text',
-        confidence_score: parsed.confidence,
-        date: new Date().toISOString(),
-      });
+      const { data: insertedTx, error: insertErr } = await supabaseAdmin
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          type: parsed.type,
+          amount: parsed.amount,
+          description: parsed.description,
+          category_id: categoryId,
+          account_id: sourceAccount ? sourceAccount.id : null,
+          to_account_id: targetAccount ? targetAccount.id : null,
+          source: 'telegram_text',
+          confidence_score: sourceAccount ? 1.0 : parsed.confidence,
+          date: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
 
-      if (insertErr) {
-        await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi: ${insertErr.message}`);
+      if (insertErr || !insertedTx) {
+        await sendTelegramMessage(chatId, `❌ Gagal menyimpan transaksi: ${insertErr?.message}`);
         return NextResponse.json({ ok: true });
       }
 
-      // 4d. Update Account Balances
+      // 4d. Update Account Balances if account already matched
       if (parsed.type === 'TRANSFER') {
         if (sourceAccount) {
           await supabaseAdmin
@@ -484,17 +492,50 @@ export async function POST(request: Request) {
           ? '🔵 <b>TRANSFER/TABUNGAN</b>'
           : '🔴 <b>PENGELUARAN</b>';
 
-      const accountBadge =
-        parsed.type === 'TRANSFER' && sourceAccount && targetAccount
-          ? `\n💳 <b>Rute:</b> ${sourceAccount.name} ➔ ${targetAccount.name}`
-          : sourceAccount
-          ? `\n💳 <b>Akun:</b> ${sourceAccount.name}`
-          : '';
+      // If user has accounts registered and didn't mention one in the text, present account selection buttons (same as OCR)
+      if (!sourceAccount && userAccounts && userAccounts.length > 0 && parsed.type !== 'TRANSFER') {
+        const inlineButtons: Array<Array<{ text: string; callback_data: string }>> = [];
+        for (let i = 0; i < userAccounts.length; i += 2) {
+          const row = [
+            {
+              text: `💳 ${userAccounts[i].name}`,
+              callback_data: `a:${i}:${insertedTx.id}`,
+            },
+          ];
+          if (userAccounts[i + 1]) {
+            row.push({
+              text: `💳 ${userAccounts[i + 1].name}`,
+              callback_data: `a:${i + 1}:${insertedTx.id}`,
+            });
+          }
+          inlineButtons.push(row);
+        }
 
-      await sendTelegramMessage(
-        chatId,
-        `✅ Transaksi Tercatat!\n\n${typeBadge}\n💰 <b>Jumlah:</b> ${formattedAmount}\n📝 <b>Keterangan:</b> ${parsed.description}\n🏷️ <b>Kategori:</b> ${parsed.categoryHint || '-'}${accountBadge}`
-      );
+        inlineButtons.push([
+          { text: '❌ Batalkan / Hapus', callback_data: `c:${insertedTx.id}` },
+        ]);
+
+        const actionText = parsed.type === 'INCOME' ? 'menambah saldo' : 'memotong saldo';
+
+        await sendTelegramMessage(
+          chatId,
+          `✅ <b>Transaksi Tercatat!</b>\n\n${typeBadge}\n💰 <b>Jumlah:</b> ${formattedAmount}\n📝 <b>Keterangan:</b> ${parsed.description}\n🏷️ <b>Kategori:</b> ${parsed.categoryHint || '-'}\n\n👇 <b>Pilih rekening untuk ${actionText}:</b>`,
+          'HTML',
+          { inline_keyboard: inlineButtons }
+        );
+      } else {
+        const accountBadge =
+          parsed.type === 'TRANSFER' && sourceAccount && targetAccount
+            ? `\n💳 <b>Rute:</b> ${sourceAccount.name} ➔ ${targetAccount.name}`
+            : sourceAccount
+            ? `\n💳 <b>Akun:</b> ${sourceAccount.name}`
+            : '';
+
+        await sendTelegramMessage(
+          chatId,
+          `✅ <b>Transaksi Tercatat!</b>\n\n${typeBadge}\n💰 <b>Jumlah:</b> ${formattedAmount}\n📝 <b>Keterangan:</b> ${parsed.description}\n🏷️ <b>Kategori:</b> ${parsed.categoryHint || '-'}${accountBadge}`
+        );
+      }
 
       return NextResponse.json({ ok: true });
     }
