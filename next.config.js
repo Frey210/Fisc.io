@@ -18,6 +18,9 @@ const nextConfig = {
       './node_modules/wasm-feature-detect/**/*',
     ],
   },
+  experimental: {
+    agentUpgrade: 'security',
+  },
 };
 
 export default nextConfig;
