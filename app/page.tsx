@@ -8,14 +8,17 @@ import { supabase } from '@/lib/supabase/client';
 import { PwaInstallButton } from '@/components/pwa-install-button';
 import { HeroInteractiveSetup } from '@/components/hero-interactive-setup';
 import { AsymmetricBentoGrid } from '@/components/asymmetric-bento-grid';
+import { LiveNlpSandbox } from '@/components/live-nlp-sandbox';
+import { InteractiveProductTour } from '@/components/interactive-product-tour';
+import { ComparisonSection } from '@/components/comparison-section';
 import { StaggeredSteps } from '@/components/staggered-steps';
 import { TechnicalTrustSection } from '@/components/technical-trust';
+import { FaqSection } from '@/components/faq-section';
 import { FloatingBackgroundAssets } from '@/components/floating-background-assets';
-import { ArrowRight, Send, Play, X, Sparkles } from 'lucide-react';
+import { ArrowRight, Send, Sparkles } from 'lucide-react';
 
 export default function LandingPage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
-  const [showVideoModal, setShowVideoModal] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -51,7 +54,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
       {/* Schema.org Structured Data */}
       <script
         type="application/ld+json"
@@ -74,6 +77,15 @@ export default function LandingPage() {
               </span>
             </div>
           </Link>
+
+          {/* Centered Navigation Links */}
+          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-400">
+            <a href="#fitur" className="hover:text-emerald-400 transition">Fitur</a>
+            <a href="#demo" className="hover:text-emerald-400 transition">Coba NLP</a>
+            <a href="#tour" className="hover:text-emerald-400 transition">Tour Produk</a>
+            <a href="#komparasi" className="hover:text-emerald-400 transition">Komparasi</a>
+            <a href="#faq" className="hover:text-emerald-400 transition">FAQ</a>
+          </nav>
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:block">
@@ -109,6 +121,7 @@ export default function LandingPage() {
           <div className="lg:col-span-6 text-left">
             {/* Copy - Badge */}
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400 mb-6 backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5" />
               <span>✨ Fisc.io 1.0 — Smart Wealth Tracker</span>
             </div>
 
@@ -122,7 +135,7 @@ export default function LandingPage() {
               Tinggalkan form manual yang membosankan. Cukup kirim pesan atau foto struk ke Telegram, dan pantau arus kas Anda di dashboard web secara real-time.
             </p>
 
-            {/* Copy - Buttons */}
+            {/* Copy - Buttons (Clean Dual CTA, No Video Intro) */}
             <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Link
                 href="/login"
@@ -132,23 +145,14 @@ export default function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
 
-              <button
-                type="button"
-                onClick={() => setShowVideoModal(true)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-6 py-3.5 text-sm font-bold text-emerald-300 backdrop-blur-md transition hover:border-emerald-400 hover:bg-emerald-500/20 active:scale-95 shadow-lg shadow-emerald-500/10"
-              >
-                <Play className="h-4 w-4 fill-emerald-400 text-emerald-400" />
-                <span>Tonton Intro (15s)</span>
-              </button>
-
               <a
                 href="https://t.me/FiscioBot"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:border-slate-700 hover:bg-slate-800"
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:border-slate-700 hover:bg-slate-800 active:scale-95 shadow-lg"
               >
                 <Send className="h-4 w-4 text-sky-400" />
-                <span>Demo Bot</span>
+                <span>Lihat Demo Bot</span>
               </a>
             </div>
 
@@ -166,81 +170,77 @@ export default function LandingPage() {
       </section>
 
       {/* 2. BENTO GRID FEATURES SECTION */}
-      <AsymmetricBentoGrid />
+      <div id="fitur">
+        <AsymmetricBentoGrid />
+      </div>
 
-      {/* 3. HOW IT WORKS (STAGGERED SCROLL REVEAL) */}
+      {/* 3. INTERACTIVE NLP PLAYGROUND */}
+      <LiveNlpSandbox />
+
+      {/* 4. PRODUCT TOUR & SCREENSHOT SHOWCASE */}
+      <InteractiveProductTour />
+
+      {/* 5. COMPARISON MATRIX */}
+      <ComparisonSection />
+
+      {/* 6. HOW IT WORKS (STAGGERED SCROLL REVEAL) */}
       <StaggeredSteps />
 
-      {/* 4. TRUST & PERFORMANCE BANNER */}
+      {/* 7. TRUST & PERFORMANCE METRICS BANNER */}
       <TechnicalTrustSection />
 
-      {/* 5. FINAL CTA */}
-      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-tr from-slate-900 via-slate-900 to-emerald-950/40 p-8 sm:p-12 text-center shadow-2xl">
-          <h2 className="text-2xl sm:text-4xl font-black text-white">
+      {/* 8. FAQ ACCORDION */}
+      <FaqSection />
+
+      {/* 9. FINAL HIGH CONVERTING CTA */}
+      <section className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-tr from-slate-900 via-slate-900 to-emerald-950/50 p-8 sm:p-14 text-center shadow-2xl">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 h-44 w-44 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-44 w-44 rounded-full bg-teal-500/20 blur-3xl pointer-events-none" />
+
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 mb-5 backdrop-blur-md">
+            <span>✨ 100% Bebas Biaya Langganan</span>
+          </div>
+
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
             Kendalikan Penuh Arus Kas Anda Hari Ini.
           </h2>
-          <div className="mt-8 flex justify-center">
+          <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed">
+            Mulai pelacakan finansial tanpa beban. Cukup hubungkan Telegram Anda dan nikmati pencatatan secepat pesan obrolan.
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-3">
             <Link
               href="/login"
-              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-8 py-3.5 text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:from-emerald-300 hover:to-teal-300 active:scale-95"
+              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-8 py-4 text-sm font-black text-slate-950 shadow-xl shadow-emerald-500/30 transition hover:from-emerald-300 hover:to-teal-300 active:scale-95"
             >
-              <span>Buat Akun Gratis</span>
+              <span>Buat Akun Gratis Sekarang</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
+            <a
+              href="https://t.me/FiscioBot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800"
+            >
+              <Send className="h-4 w-4 text-sky-400" />
+              <span>Buka @FiscioBot</span>
+            </a>
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/5 py-8 text-center text-xs text-slate-500">
-        <p>© {new Date().getFullYear()} Fisc.io. Seluruh hak cipta dilindungi.</p>
-      </footer>
-
-      {/* 15s Motion Intro Modal */}
-      {showVideoModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"
-          onClick={() => setShowVideoModal(false)}
-        >
-          <div 
-            className="relative w-full max-w-5xl rounded-3xl border border-white/10 bg-slate-950 p-4 sm:p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-4 px-2">
-              <div className="flex items-center gap-2.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
-                  Fisc.io 15s Motion Showcase (120 BPM)
-                </span>
-                <a
-                  href="/intro-video.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hidden sm:inline-block text-[11px] font-semibold text-emerald-400 hover:underline ml-2"
-                >
-                  ↗ Buka Fullscreen
-                </a>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowVideoModal(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="relative w-full overflow-hidden rounded-2xl aspect-video border border-white/10 bg-black shadow-inner">
-              <iframe
-                src="/intro-video.html"
-                title="Fisc.io 15s Motion Intro"
-                className="h-full w-full border-0"
-                allow="autoplay"
-              />
-            </div>
+      <footer className="border-t border-white/5 py-10 text-center text-xs text-slate-500">
+        <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Fisc.io" className="h-5 w-5" />
+            <span className="font-bold text-white">Fisc.io</span>
+            <span>— Smart Wealth Tracker</span>
           </div>
+          <p>© {new Date().getFullYear()} Fisc.io. Seluruh hak cipta dilindungi.</p>
         </div>
-      )}
+      </footer>
     </div>
   );
 }
