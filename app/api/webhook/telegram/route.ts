@@ -233,14 +233,26 @@ export async function POST(request: Request) {
 
     const userId = userLink.user_id;
 
-    // 4. Handle Photo (Receipt OCR) Ingestion
-    if (message.photo && message.photo.length > 0) {
-      // Pick optimal resolution: around 700-1280px wide for rapid, accurate OCR
-      const optimalPhoto =
-        message.photo.find((p) => p.width >= 700 && p.width <= 1280) ||
-        (message.photo.length >= 2
-          ? message.photo[message.photo.length - (message.photo.length > 3 ? 2 : 1)]
-          : message.photo[message.photo.length - 1]);
+    // 4. Handle Photo or Image Document (Receipt OCR) Ingestion
+    const isPhoto = Boolean(message.photo && message.photo.length > 0);
+    const isImageDoc = Boolean(
+      message.document &&
+      typeof message.document.mime_type === 'string' &&
+      message.document.mime_type.startsWith('image/')
+    );
+
+    if (isPhoto || isImageDoc) {
+      let fileId: string;
+      if (isPhoto && message.photo) {
+        const optimalPhoto =
+          message.photo.find((p) => p.width >= 700 && p.width <= 1280) ||
+          (message.photo.length >= 2
+            ? message.photo[message.photo.length - (message.photo.length > 3 ? 2 : 1)]
+            : message.photo[message.photo.length - 1]);
+        fileId = optimalPhoto.file_id;
+      } else {
+        fileId = message.document!.file_id;
+      }
 
       // Step A: Immediately send status notification to Telegram user
       await sendTelegramMessage(chatId, `🔍 <i>Memproses struk belanja dengan OCR...</i>`);
@@ -248,7 +260,7 @@ export async function POST(request: Request) {
       // Step B: Dispatch heavy OCR processing asynchronously via Next.js after()
       after(async () => {
         try {
-          const fileUrl = await getTelegramFileUrl(optimalPhoto.file_id);
+          const fileUrl = await getTelegramFileUrl(fileId);
           const { parseReceiptImage } = await import('@/lib/ocr/receipt-parser');
           const ocrResult = await parseReceiptImage(fileUrl);
 
@@ -356,8 +368,9 @@ export async function POST(request: Request) {
           );
         } catch (ocrErr: unknown) {
           console.error('[OCR Error]:', ocrErr);
-          const errStr = ocrErr instanceof Error ? ocrErr.message : 'Gagal memproses gambar';
-          await sendTelegramMessage(chatId, `❌ OCR Gagal: ${errStr}`);
+          const rawErr = ocrErr instanceof Error ? ocrErr.message : 'Gagal memproses gambar';
+          const safeErr = rawErr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          await sendTelegramMessage(chatId, `❌ OCR Gagal: ${safeErr}`);
         }
       });
 

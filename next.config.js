@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: [
+    'sharp',
     'tesseract.js',
     'tesseract.js-core',
     'bmp-js',
@@ -10,6 +11,7 @@ const nextConfig = {
   ],
   outputFileTracingIncludes: {
     '/api/**/*': [
+      './lib/ocr/tessdata/**/*',
       './node_modules/tesseract.js/**/*',
       './node_modules/tesseract.js-core/**/*',
       './node_modules/bmp-js/**/*',

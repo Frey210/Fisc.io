@@ -21,7 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*.traineddata
+/*.traineddata
+!lib/ocr/tessdata/*.traineddata
 
 # Local Env Files
 .env*.local
